@@ -70,7 +70,6 @@ python tools/download_data.py
 
 
 ## Training
-
 - Add a config file for the training
 - Run the training
 
