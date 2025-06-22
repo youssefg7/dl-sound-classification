@@ -1,0 +1,3 @@
+_target_: src.models.envnet_v2.EnvNetV2
+num_classes: ${dataset.num_classes}
+dropout: 0.5

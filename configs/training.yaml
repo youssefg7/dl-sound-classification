@@ -1,0 +1,42 @@
+defaults:
+  - _self_
+  - dataset: esc50
+  - model: envnet_v2
+  - override hydra/job_logging: none
+  - override hydra/hydra_logging: none
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+
+seed: 42
+
+trainer:
+  max_epochs: 50
+  accelerator: auto        # picks GPU if available
+  precision: 16-mixed      # mixed-precision
+  devices: 1
+  log_every_n_steps: 10    # Log more frequently for small datasets
+
+optimizer:
+  _target_: torch.optim.SGD
+  lr: 0.05
+  momentum: 0.9
+  weight_decay: 5e-4
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [20, 35]
+  gamma: 0.2
+
+batch_size: 32
+num_workers: 2
+
+logging:
+  experiment_name: envnet_esc50
+checkpoint:
+  monitor: val/acc
+  mode: max
+  dirpath: outputs/checkpoints
+  save_top_k: 3 

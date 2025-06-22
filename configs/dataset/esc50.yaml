@@ -1,0 +1,11 @@
+# Dataset config
+_target_: src.datasets.esc50.ESC50DataModule
+root: data/processed/esc50
+num_classes: 50
+fold: 0                # override from CLI for CV
+val_split: 0.1
+
+# augmentation flags (optional)
+augment:
+  time_mask: false
+  freq_mask: false

@@ -192,3 +192,13 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Data
+data/raw/
+data/processed/
+
+# Misc
+.DS_Store
+
+# MLflow logs
+mlruns/
