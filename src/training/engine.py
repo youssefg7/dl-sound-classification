@@ -1,5 +1,5 @@
 """
-LightningModule wrapper that can train any classification backbone described in a Hydra config.  
+LightningModule wrapper that can train any classification backbone described in a Hydra config.
 
 Example YAML stanza
 -------------------
@@ -11,16 +11,16 @@ loss:
   _target_: torch.nn.CrossEntropyLoss
   label_smoothing: 0.1
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict
 
+import lightning.pytorch as pl
 import torch
 import torch.nn as nn
-import lightning.pytorch as pl
 from hydra.utils import instantiate
 from omegaconf import DictConfig
-
 
 
 def _adapt_head_if_possible(model: nn.Module, num_classes: int) -> None:
@@ -38,7 +38,6 @@ def _adapt_head_if_possible(model: nn.Module, num_classes: int) -> None:
         in_feat = model.fc.in_features
         model.fc = nn.Linear(in_feat, num_classes)
     # else: leave unchanged - assume caller set correct `num_classes`
-
 
 
 class LitClassifier(pl.LightningModule):
@@ -92,12 +91,19 @@ class LitClassifier(pl.LightningModule):
         #    Convert nested DictConfig → Python dict so JSON-serialisable
         self.save_hyperparameters(
             {
-                "optim": dict(self._optim_cfg) if isinstance(self._optim_cfg, DictConfig) else self._optim_cfg,
-                "sched": dict(self._sched_cfg) if isinstance(self._sched_cfg, DictConfig) else self._sched_cfg,
+                "optim": (
+                    dict(self._optim_cfg)
+                    if isinstance(self._optim_cfg, DictConfig)
+                    else self._optim_cfg
+                ),
+                "sched": (
+                    dict(self._sched_cfg)
+                    if isinstance(self._sched_cfg, DictConfig)
+                    else self._sched_cfg
+                ),
                 "loss": str(self.criterion),
             }
         )
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -142,7 +148,6 @@ class LitClassifier(pl.LightningModule):
             self.log("test/acc", test_acc, prog_bar=True)
             self.metric.reset()
 
-
     def configure_optimizers(self):
         optim = instantiate(self._optim_cfg, params=self.parameters())
 
@@ -155,7 +160,6 @@ class LitClassifier(pl.LightningModule):
         if isinstance(sched, dict):
             return {"optimizer": optim, "lr_scheduler": sched}
         return {"optimizer": optim, "lr_scheduler": {"scheduler": sched}}
-
 
 
 def build_from_cfg(cfg: DictConfig) -> LitClassifier:

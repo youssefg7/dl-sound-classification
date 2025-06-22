@@ -25,18 +25,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict
 
-import numpy as np
 import lightning.pytorch as pl
-import torch
 import mlflow
 import mlflow.pytorch
-from hydra import compose, initialize, initialize_config_dir, main as hydra_main
+import numpy as np
+import torch
+from hydra import compose, initialize, initialize_config_dir
+from hydra import main as hydra_main
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
+from src.training.callbacks import build_callbacks  # optional helper
+
 # local imports
 from src.training.engine import build_from_cfg
-from src.training.callbacks import build_callbacks   # optional helper
+
 
 # --------------------------------------------------------------------------- #
 # Utility: deterministic seeding                                              #
@@ -51,10 +54,12 @@ def fix_seed(seed: int) -> None:
 # --------------------------------------------------------------------------- #
 # Hydra entry-point                                                           #
 # --------------------------------------------------------------------------- #
-@hydra_main(version_base=None,
-            config_path="../configs",   # <- relative to THIS file
-            config_name="training")
-def train(cfg: DictConfig) -> None:     # noqa: D401
+@hydra_main(
+    version_base=None,
+    config_path="../configs",  # <- relative to THIS file
+    config_name="training",
+)
+def train(cfg: DictConfig) -> None:  # noqa: D401
     """Main training function (Hydra injects `cfg`)."""
     # --------------------------------------------------------------------- #
     # 0)  Reproducibility
@@ -77,7 +82,7 @@ def train(cfg: DictConfig) -> None:     # noqa: D401
         "augment": cfg.dataset.augment,
     }
     datamodule = instantiate(datamodule_cfg)
-    lit_model  = build_from_cfg(cfg)             # generic classifier
+    lit_model = build_from_cfg(cfg)  # generic classifier
 
     # --------------------------------------------------------------------- #
     # 2)  MLflow logger & autolog
@@ -87,7 +92,7 @@ def train(cfg: DictConfig) -> None:     # noqa: D401
         experiment_name=cfg.logging.experiment_name,
         tracking_uri=tracking_uri,
     )
-    mlflow.pytorch.autolog(log_models=False)     # Lightning-aware
+    mlflow.pytorch.autolog(log_models=False)  # Lightning-aware
 
     # --------------------------------------------------------------------- #
     # 3)  Trainer with callbacks
@@ -95,13 +100,13 @@ def train(cfg: DictConfig) -> None:     # noqa: D401
     trainer = pl.Trainer(
         **cfg.trainer,
         logger=logger,
-        callbacks=build_callbacks(cfg),        # ModelCheckpoint, etc.
+        callbacks=build_callbacks(cfg),  # ModelCheckpoint, etc.
     )
 
     # --------------------------------------------------------------------- #
     # 4)  Fit & (optionally) test
     # --------------------------------------------------------------------- #
-    ckpt_path = cfg.get("ckpt_path", None)       # resume or None
+    ckpt_path = cfg.get("ckpt_path", None)  # resume or None
     trainer.fit(lit_model, datamodule=datamodule, ckpt_path=ckpt_path)
     trainer.test(ckpt_path="best", datamodule=datamodule)
 
@@ -110,4 +115,4 @@ def train(cfg: DictConfig) -> None:     # noqa: D401
 
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
-    train()      # Hydra will parse CLI overrides automatically
+    train()  # Hydra will parse CLI overrides automatically

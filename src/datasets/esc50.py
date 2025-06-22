@@ -14,6 +14,7 @@ data/processed/esc50/
  └─ fold_4/
      dataset_stats.json
 """
+
 from __future__ import annotations
 
 import math
@@ -21,11 +22,12 @@ import random
 from pathlib import Path
 from typing import Callable, Dict, List, Sequence
 
+import lightning.pytorch as pl
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset
-import lightning.pytorch as pl
 
-from ..utils.audio import melspectrogram, SpecAugment
+from ..utils.audio import SpecAugment, melspectrogram
+
 
 # --------------------------------------------------------------------------- #
 # Low-level dataset
@@ -69,7 +71,6 @@ class ESC50Dataset(Dataset):
         else:
             self.augment = None
 
-
     # -------------------------------------------- #
     def __len__(self) -> int:
         return len(self.files)
@@ -88,6 +89,7 @@ class ESC50Dataset(Dataset):
 # --------------------------------------------------------------------------- #
 # Lightning-style DataModule
 # --------------------------------------------------------------------------- #
+
 
 class ESC50DataModule(pl.LightningDataModule):
     """

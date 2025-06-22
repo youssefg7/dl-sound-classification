@@ -19,8 +19,8 @@ from torchaudio import transforms as T
 # ---------------------------------------------------------------------------- #
 # Constants                                                                    #
 # ---------------------------------------------------------------------------- #
-TARGET_SR = 44_100       # default sample-rate for ESC-50
-EPSILON = 1e-9           # avoid log(0)
+TARGET_SR = 44_100  # default sample-rate for ESC-50
+EPSILON = 1e-9  # avoid log(0)
 
 
 # ---------------------------------------------------------------------------- #
@@ -39,12 +39,12 @@ def load_waveform(
     * Converts stereo → mono by channel-mean.
     * Optional **peak normalisation** (common in ESC baselines).
     """
-    wav, sr = torchaudio.load(str(path))              # float32 / [-1, 1]
+    wav, sr = torchaudio.load(str(path))  # float32 / [-1, 1]
 
     if sr != target_sr:
         wav = torchaudio.transforms.Resample(sr, target_sr)(wav)
 
-    if mono and wav.shape[0] > 1:                     # (chan, time)
+    if mono and wav.shape[0] > 1:  # (chan, time)
         wav = torch.mean(wav, dim=0, keepdim=True)
 
     if peak_norm:
@@ -109,7 +109,7 @@ class SpecAugment(torch.nn.Module):
 def bc_mix(
     wav_a: torch.Tensor,
     wav_b: torch.Tensor,
-    *,                          # keyword-only for clarity
+    *,  # keyword-only for clarity
     ratio: float | None = None,
 ) -> Tuple[torch.Tensor, float]:
     """

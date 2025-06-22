@@ -37,6 +37,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 
+
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
@@ -76,7 +77,7 @@ def prepare_esc50(validate_hash: bool = True) -> None:
     }
 
     for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing ESC-50"):
-        fold = int(row["fold"])               # 1-based → 1…5
+        fold = int(row["fold"])  # 1-based → 1…5
         category = row["category"]
         label = int(row["target"])
         filename = row["filename"]
@@ -101,9 +102,7 @@ def prepare_esc50(validate_hash: bool = True) -> None:
         hist = stats["class_histogram"]  # type: ignore[assignment]
         hist[category] = hist.get(category, 0) + 1  # type: ignore[index]
 
-        out_file = (
-            PROC_DIR / f"fold_{fold - 1}" / f"{filename.replace('.wav', '.pt')}"
-        )
+        out_file = PROC_DIR / f"fold_{fold - 1}" / f"{filename.replace('.wav', '.pt')}"
         save_tensor(wave, label, out_file)
 
     # write stats
