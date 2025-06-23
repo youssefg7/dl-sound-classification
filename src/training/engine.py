@@ -14,7 +14,7 @@ loss:
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import lightning.pytorch as pl
 import torch
@@ -54,6 +54,8 @@ class LitClassifier(pl.LightningModule):
         LR scheduler spec; set to `null` in YAML to skip.
     loss_cfg  : DictConfig
         Loss function spec; CrossEntropyLoss by default.
+    metric_cfg : DictConfig
+        Metric function spec; Accuracy by default.
     """
 
     def __init__(
@@ -127,22 +129,22 @@ class LitClassifier(pl.LightningModule):
         return loss
 
     # Lightning hooks ------------------------------------------------------- #
-    def training_step(self, batch: Any, batch_idx: int):  # type: ignore[override]
+    def training_step(self, batch: Any, batch_idx: int):
         return self._step(batch, "train")
 
-    def validation_step(self, batch: Any, batch_idx: int):  # type: ignore[override]
+    def validation_step(self, batch: Any, batch_idx: int):
         self._step(batch, "val")
 
-    def test_step(self, batch: Any, batch_idx: int):  # type: ignore[override]
+    def test_step(self, batch: Any, batch_idx: int):
         self._step(batch, "test")
 
-    def on_validation_epoch_end(self) -> None:  # noqa: D401
+    def on_validation_epoch_end(self) -> None:
         if self.metric is not None:
             val_acc = self.metric.compute()
             self.log("val/acc", val_acc, prog_bar=True)
             self.metric.reset()
 
-    def on_test_epoch_end(self) -> None:  # noqa: D401
+    def on_test_epoch_end(self) -> None:
         if self.metric is not None:
             test_acc = self.metric.compute()
             self.log("test/acc", test_acc, prog_bar=True)

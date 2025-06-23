@@ -2,8 +2,8 @@
 _target_: src.datasets.esc50.ESC50DataModule
 root: data/processed/esc50
 num_classes: 50
-fold: 0                # override from CLI for CV
-val_split: 0.1
+fold: 0                # used for testing
+val_split: 0.1         # fraction of the remaining folds to be used for validation
 
 # augmentation flags (optional)
 augment:

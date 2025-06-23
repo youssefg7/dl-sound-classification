@@ -74,7 +74,7 @@ python tools/download_data.py
 - Run the training
 
 ```bash
-python train.py --config configs/train/default.yaml
+python train.py
 ```
 
 ## Experiment Tracking

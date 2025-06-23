@@ -18,22 +18,18 @@ from __future__ import annotations
 import os
 import random
 import sys
-from pathlib import Path
 
 # Add project root to path before local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from typing import Dict
 
 import lightning.pytorch as pl
 import mlflow
 import mlflow.pytorch
 import numpy as np
 import torch
-from hydra import compose, initialize, initialize_config_dir
 from hydra import main as hydra_main
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from src.training.callbacks import build_callbacks  # optional helper
 
