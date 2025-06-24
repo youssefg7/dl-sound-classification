@@ -58,15 +58,22 @@ git config core.hooksPath .githooks
 
 ## Data
 
-- Download the data (ESC-50 and UrbanSound8K)
+1. Download the data (ESC-50 and UrbanSound8K)
 
 ```bash
-python tools/download_data.py
+python scripts/download_data.py
 ```
 
 - Or manually:
   - [ESC-50](https://github.com/karolpiczak/ESC-50): Dataset for Environmental Sound Classification (616 MB)
   - [UrbanSound8K](https://urbansounddataset.weebly.com/urbansound8k.html): A Dataset and Taxonomy for Urban Sound Research (5.6 GB)
+
+
+2. Preprocess the data
+
+```bash
+python scripts/prepare_esc50.py
+```
 
 
 ## Training
