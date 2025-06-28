@@ -58,9 +58,13 @@ def fix_seed(seed: int) -> None:
 def train(cfg: DictConfig) -> None:  # noqa: D401
     """Main training function (Hydra injects `cfg`)."""
     # --------------------------------------------------------------------- #
-    # 0)  Reproducibility
+    # 0)  Reproducibility & Performance
     # --------------------------------------------------------------------- #
     fix_seed(cfg.seed)
+    
+    # Optimize for H100/A100 Tensor Cores
+    if torch.cuda.is_available():
+        torch.set_float32_matmul_precision('high')
 
     # --------------------------------------------------------------------- #
     # 1)  Instantiate DataModule & LightningModule
@@ -83,7 +87,10 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
     # --------------------------------------------------------------------- #
     # 2)  MLflow logger & autolog
     # --------------------------------------------------------------------- #
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+    # Use absolute path for MLflow to avoid permission issues with Hydra's changing directories
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    default_mlruns = f"file:{project_root}/mlruns"
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", default_mlruns)
     logger = pl.loggers.MLFlowLogger(
         experiment_name=cfg.logging.experiment_name,
         tracking_uri=tracking_uri,

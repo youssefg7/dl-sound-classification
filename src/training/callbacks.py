@@ -30,7 +30,29 @@ import lightning.pytorch as pl
 # --------------------------------------------------------------------------- #
 def _build_checkpoint(cfg) -> pl.callbacks.ModelCheckpoint:
     """Top-k checkpoint on a metric (defaults come from YAML)."""
-    return pl.callbacks.ModelCheckpoint(**cfg.checkpoint)
+    import os
+    from hydra.core.hydra_config import HydraConfig
+    
+    # Get checkpoint config
+    checkpoint_cfg = dict(cfg.checkpoint)
+    
+    # Use Hydra's output directory for checkpoints
+    try:
+        # Get Hydra's runtime configuration
+        hydra_cfg = HydraConfig.get()
+        output_dir = hydra_cfg.runtime.output_dir
+        dirpath = checkpoint_cfg.get("dirpath", "checkpoints")
+        
+        # Always use Hydra's output directory
+        checkpoint_cfg["dirpath"] = os.path.join(output_dir, dirpath)
+        
+    except Exception:
+        # Fallback if Hydra config is not available
+        dirpath = checkpoint_cfg.get("dirpath", "checkpoints")
+        if not os.path.isabs(dirpath):
+            checkpoint_cfg["dirpath"] = os.path.join(os.getcwd(), dirpath)
+    
+    return pl.callbacks.ModelCheckpoint(**checkpoint_cfg)
 
 
 def _build_early_stop(cfg) -> pl.callbacks.EarlyStopping | None:
