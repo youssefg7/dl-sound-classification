@@ -108,11 +108,15 @@ git clone git@github.com:<org>/<repo>.git ~/dl-sound-classification
 
 - Setup uv, venv, libs normally (inside /scratch folder)
 
-- Interactive H100 session
+- Request an interactive H100 session
 ```bash
 salloc --qos=coc-ice \
        --gres=gpu:h100:1 \
        --time=08:00:00 \
        --cpus-per-task=8 --mem=64G \
-       --pty bash -l
+```
+
+- Access the interactive session
+```bash
+srun --pty bash -l 
 ```
