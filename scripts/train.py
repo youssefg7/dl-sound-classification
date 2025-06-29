@@ -23,8 +23,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import lightning.pytorch as pl
-import mlflow
-import mlflow.pytorch
+from lightning.pytorch.loggers import MLFlowLogger
 import numpy as np
 import torch
 from hydra import main as hydra_main
@@ -91,17 +90,34 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_mlruns = f"file:{project_root}/mlruns"
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", default_mlruns)
-    logger = pl.loggers.MLFlowLogger(
+    logger = MLFlowLogger(
         experiment_name=cfg.logging.experiment_name,
         tracking_uri=tracking_uri,
     )
-    mlflow.pytorch.autolog(log_models=False)  # Lightning-aware
 
     # --------------------------------------------------------------------- #
-    # 3)  Trainer with callbacks
+    # 3)  Calculate dynamic logging frequency and setup Trainer
     # --------------------------------------------------------------------- #
+    # Calculate steps per epoch for dynamic logging
+    trainer_cfg = dict(cfg.trainer)
+    
+    # Calculate steps per epoch if not already set
+    if "log_every_n_steps" not in trainer_cfg or trainer_cfg.get("log_every_n_steps") is None:
+        try:
+            # Setup datamodule to get train dataloader length
+            datamodule.setup("fit")
+            train_loader = datamodule.train_dataloader()
+            steps_per_epoch = len(train_loader)
+            
+            # Set log_every_n_steps to log approximately once per epoch
+            trainer_cfg["log_every_n_steps"] = max(1, steps_per_epoch)
+            print(f"✓ Dynamic logging: {steps_per_epoch} steps per epoch, logging every {trainer_cfg['log_every_n_steps']} steps")
+        except Exception as e:
+            print(f"⚠ Could not calculate dynamic logging frequency: {e}, using default")
+            trainer_cfg["log_every_n_steps"] = 50  # fallback
+    
     trainer = pl.Trainer(
-        **cfg.trainer,
+        **trainer_cfg,
         logger=logger,
         callbacks=build_callbacks(cfg),  # ModelCheckpoint, etc.
     )

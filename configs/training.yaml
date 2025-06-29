@@ -17,7 +17,7 @@ trainer:
   accelerator: auto        # picks GPU if available
   precision: 16-mixed      # mixed-precision
   devices: 1
-  log_every_n_steps: 1    # Log more frequently for small datasets
+  # log_every_n_steps will be set dynamically based on steps per epoch
 
 optimizer:
   _target_: torch.optim.Adam

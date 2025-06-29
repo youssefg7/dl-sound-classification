@@ -84,6 +84,19 @@ class LitClassifier(pl.LightningModule):
 
         # optional metrics (e.g. torchmetrics.Accuracy)
         self.metric = instantiate(metric_cfg) if metric_cfg is not None else None
+        if self.metric is None:
+            metric_cfg = DictConfig(
+                {
+                    "_target_": "torchmetrics.classification.MulticlassAccuracy",
+                    "num_classes": model_cfg.get("num_classes", None),
+                }
+            )
+            
+        self.train_acc = instantiate(metric_cfg)
+        self.val_acc = instantiate(metric_cfg)
+        self.test_acc = instantiate(metric_cfg)
+
+    
 
         # 4) Store optimiser/scheduler cfg for later
         self._optim_cfg = optim_cfg
@@ -116,15 +129,19 @@ class LitClassifier(pl.LightningModule):
         if isinstance(batch, dict):
             x, y = batch["inputs"], batch["labels"]
         else:
-            x, y = batch  # type: ignore[misc]
+            x, y = batch 
 
         logits = self(x)
         loss = self.criterion(logits, y)
 
         # Lightning metric logging
         self.log(f"{stage}/loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        if self.metric is not None:
-            self.metric.update(logits, y)
+        if stage == "train":
+            self.train_acc.update(logits, y)
+        elif stage == "val":
+            self.val_acc.update(logits, y)
+        elif stage == "test":
+            self.test_acc.update(logits, y)
 
         return loss
 
@@ -138,17 +155,21 @@ class LitClassifier(pl.LightningModule):
     def test_step(self, batch: Any, batch_idx: int):
         self._step(batch, "test")
 
+    def on_train_epoch_end(self) -> None:
+        """Compute and log training accuracy at the end of each epoch."""
+        train_acc = self.train_acc.compute()
+        self.log("train/acc", train_acc, prog_bar=True)
+        self.train_acc.reset()
+
     def on_validation_epoch_end(self) -> None:
-        if self.metric is not None:
-            val_acc = self.metric.compute()
-            self.log("val/acc", val_acc, prog_bar=True)
-            self.metric.reset()
+        val_acc = self.val_acc.compute()
+        self.log("val/acc", val_acc, prog_bar=True)
+        self.val_acc.reset()
 
     def on_test_epoch_end(self) -> None:
-        if self.metric is not None:
-            test_acc = self.metric.compute()
-            self.log("test/acc", test_acc, prog_bar=True)
-            self.metric.reset()
+        test_acc = self.test_acc.compute()
+        self.log("test/acc", test_acc, prog_bar=True)
+        self.test_acc.reset()
 
     def configure_optimizers(self):
         optim = instantiate(self._optim_cfg, params=self.parameters())

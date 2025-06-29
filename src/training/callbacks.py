@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import List
 
 import lightning.pytorch as pl
+from lightning.pytorch.callbacks import TQDMProgressBar
 
 
 # --------------------------------------------------------------------------- #
@@ -95,6 +96,7 @@ def build_callbacks(cfg) -> List[pl.callbacks.Callback]:
         _build_early_stop(cfg),
         _build_lr_monitor(),
         _build_swa(cfg),
+        TQDMProgressBar(leave=True),  # Keep epoch lines visible
     ]
     # filter out None entries (callbacks disabled by config)
     return [cb for cb in cbs if cb is not None]
