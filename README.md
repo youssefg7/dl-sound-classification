@@ -81,7 +81,7 @@ python scripts/prepare_esc50.py
 - Run the training
 
 ```bash
-python train.py
+python scripts/train.py
 ```
 
 ## Experiment Tracking
