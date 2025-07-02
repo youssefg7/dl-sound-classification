@@ -20,4 +20,7 @@ dependencies = [
     "torchaudio>=2.7.1",
     "torchvision>=0.22.1",
     "tqdm>=4.67.1",
+    "pyngrok",
+    "timm",
+    "python-dotenv"
 ]

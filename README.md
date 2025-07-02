@@ -92,6 +92,26 @@ python scripts/train.py
 mlflow ui
 ```
 
+## Experiment Tracking Without Local Hosting
+
+- If you do not wish to host the MLflow locally, you can use grok to visualize to run it on the web.
+
+- To do so, create an .env file in the project directory, then generate an API key from the following website: (https://dashboard.ngrok.com/get-started/your-authtoken)
+
+- Fill the .env file with the following:
+
+```bash
+NGROK_AUTHTOKEN=<your-actual-token-here>
+```
+
+- Run the MLflow script:
+
+```bash
+python scripts/mlflow.py
+```
+
+- You’ll see a public URL like https://1234abcd.ngrok.io that anyone can open and see your experiments while you keep the server running.
+
 ## Tech Stack
 
 - [uv](https://docs.astral.sh/uv/): For package management.
