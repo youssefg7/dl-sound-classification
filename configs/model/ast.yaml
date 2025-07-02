@@ -1,0 +1,2 @@
+_target_: src.models.ast.ASTModel
+num_classes: ${dataset.num_classes}
