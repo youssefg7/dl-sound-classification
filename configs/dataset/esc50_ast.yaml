@@ -1,0 +1,29 @@
+# ESC-50 Dataset config optimized for Audio Spectrogram Transformer (AST)
+# Based on: Gong et al. "AST: Audio Spectrogram Transformer"
+
+# Inherit from base esc50 config
+defaults:
+  - esc50
+
+# Override for AST specific settings
+preprocessing_mode: ast
+
+# AST preprocessing configuration
+preprocessing_config:
+  n_mels: 128           # 128-dimensional log-Mel filter-bank
+  sample_rate: 44100    # 44.1 kHz
+  normalize: true       # normalize to mean=0, std=0.5
+  target_mean: 0.0
+  target_std: 0.5
+
+# Disable BC mixing (not used with AST)
+enable_bc_mixing: false
+
+# Enable Mixup augmentation for AST
+enable_mixup: true
+mixup_alpha: 0.5
+
+# Enable SpecAugment for AST
+augment:
+  time_mask: 192        # up to 192 time frames masked
+  freq_mask: 48         # up to 48 mel bins masked 

@@ -1,0 +1,67 @@
+# @package _global_
+# EnvNet-v2 Experiment with Between-Class Mixing
+# Based on: Tokozume et al. "Learning from Between-class Examples for Deep Sound Recognition"
+
+defaults:
+  - override /dataset: esc50_envnet_v2  # Use EnvNet-v2 specific dataset config
+  - override /model: envnet_v2
+  - _self_
+
+# Experiment metadata
+experiment_name: "envnet_v2_bc_mixing_esc50"
+tags: ["envnet_v2", "bc_mixing", "esc50"]
+
+# Training configuration
+trainer:
+  max_epochs: 200
+  accelerator: auto
+  precision: 16-mixed
+  devices: 1
+  log_every_n_steps: 50
+
+# BC mixing works best with KL divergence loss
+loss:
+  _target_: torch.nn.KLDivLoss
+  reduction: batchmean
+  log_target: false
+
+# Optimizer (from EnvNet-v2 paper)
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+  weight_decay: 1e-4
+
+# Learning rate scheduler
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 200  # matches max_epochs
+
+# Metrics
+metric:
+  _target_: torchmetrics.classification.Accuracy
+  task: multiclass
+  num_classes: ${dataset.num_classes}
+
+# Training parameters
+batch_size: 32
+num_workers: 8
+seed: 42
+
+# Logging
+logging:
+  experiment_name: ${experiment_name}
+
+# Checkpointing
+checkpoint:
+  monitor: val/acc
+  mode: max
+  dirpath: checkpoints
+  save_top_k: 3
+  filename: "envnet_v2_bc-{epoch:02d}-{val/acc:.3f}"
+
+# Early stopping
+early_stop:
+  monitor: val/acc
+  mode: max
+  patience: 20
+  min_delta: 0.001 

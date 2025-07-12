@@ -5,7 +5,23 @@ num_classes: 50
 fold: 0                # used for testing
 val_split: 0.1         # fraction of the remaining folds to be used for validation
 
-# augmentation flags (optional)
+# Model-specific preprocessing mode ('envnet_v2' or 'ast')
+preprocessing_mode: envnet_v2
+
+# Preprocessing configuration
+preprocessing_config:
+  window_length: 5.0     # seconds for EnvNet-v2 random crops (matches model architecture)
+  padding_ratio: 0.5     # T/2 padding on both sides
+  sample_rate: 44100     # target sample rate
+  n_mels: 128           # mel bins for AST mode
+  augment:
+    time_stretch: [0.8, 1.25]  # time stretch range for EnvNet-v2
+    gain_shift: [-6, 6]        # gain shift range in dB
+
+# Between-Class mixing for EnvNet-v2 (optional)
+enable_bc_mixing: false  # Set to true to enable BC mixing
+
+# Legacy augmentation flags (for AST SpecAugment)
 augment:
   time_mask: false
   freq_mask: false

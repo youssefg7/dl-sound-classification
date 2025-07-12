@@ -1,0 +1,27 @@
+# ESC-50 Dataset config optimized for EnvNet-v2 with BC mixing
+# Based on: Tokozume et al. "Learning from Between-class Examples for Deep Sound Recognition"
+
+# Inherit from base esc50 config
+defaults:
+  - esc50
+
+# Override for EnvNet-v2 specific settings
+preprocessing_mode: envnet_v2
+
+# EnvNet-v2 preprocessing configuration
+preprocessing_config:
+  window_length: 5.0     # T=5.0s window to match model architecture
+  padding_ratio: 0.5     # T/2 padding on both sides  
+  sample_rate: 44100     # 44.1 kHz as in paper
+  n_mels: 128           # not used for EnvNet-v2 but kept for compatibility
+  augment:
+    time_stretch: [0.8, 1.25]  # time-scale stretch factor range
+    gain_shift: [-6, 6]        # gain shift range in dB
+
+# Enable Between-Class mixing (core EnvNet-v2 feature)
+enable_bc_mixing: true
+
+# Disable legacy augmentation (not used with EnvNet-v2)
+augment:
+  time_mask: false
+  freq_mask: false 

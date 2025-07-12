@@ -1,0 +1,66 @@
+# @package _global_
+# Audio Spectrogram Transformer (AST) Experiment with Mixup and SpecAugment
+# Based on: Gong et al. "AST: Audio Spectrogram Transformer"
+
+defaults:
+  - override /dataset: esc50_ast  # Use AST specific dataset config
+  - override /model: ast
+  - _self_
+
+# Experiment metadata
+experiment_name: "ast_mixup_esc50"
+tags: ["ast", "mixup", "specaugment", "esc50"]
+
+# Training configuration
+trainer:
+  max_epochs: 100
+  accelerator: auto
+  precision: 16-mixed
+  devices: 1
+  log_every_n_steps: 50
+
+# Mixup works well with CrossEntropy loss (handles soft labels automatically)
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+  label_smoothing: 0.0
+
+# Optimizer (from AST paper)
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.0005  # Lower LR for transformer models
+  weight_decay: 1e-6
+
+# Learning rate scheduler
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 100  # matches max_epochs
+
+# Metrics
+metric:
+  _target_: torchmetrics.classification.Accuracy
+  task: multiclass
+  num_classes: ${dataset.num_classes}
+
+# Training parameters
+batch_size: 16  # Smaller batch size for transformer models
+num_workers: 8
+seed: 42
+
+# Logging
+logging:
+  experiment_name: ${experiment_name}
+
+# Checkpointing
+checkpoint:
+  monitor: val/acc
+  mode: max
+  dirpath: checkpoints
+  save_top_k: 3
+  filename: "ast_mixup-{epoch:02d}-{val/acc:.3f}"
+
+# Early stopping
+early_stop:
+  monitor: val/acc
+  mode: max
+  patience: 15
+  min_delta: 0.001 

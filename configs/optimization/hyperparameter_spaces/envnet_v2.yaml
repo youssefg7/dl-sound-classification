@@ -1,0 +1,13 @@
+# Hyperparameter space for EnvNet-v2 model
+# This file defines the search space for model-specific hyperparameters
+
+model:
+  # Dropout rate for regularization
+  dropout:
+    type: float
+    low: 0.1
+    high: 0.5
+    log: false
+  
+  # Number of classes (fixed, but can be made variable for different datasets)
+  # num_classes: 50  # This would be fixed from dataset config 

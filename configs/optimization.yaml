@@ -1,0 +1,84 @@
+defaults:
+  - _self_
+  - dataset: esc50
+  - model: envnet_v2
+  - override hydra/job_logging: none
+  - override hydra/hydra_logging: none
+
+hydra:
+  run:
+    dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  output_subdir: null
+
+seed: 42
+
+trainer:
+  max_epochs: 1000
+  accelerator: auto        # picks GPU if available
+  precision: 16-mixed      # mixed-precision
+  devices: 1
+  log_every_n_steps: 10    # Log more frequently than default 50
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+  weight_decay: 1e-4
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 100  # matches max_epochs
+
+metric:
+  _target_: torchmetrics.classification.Accuracy
+  task: multiclass
+  num_classes: ${dataset.num_classes}
+
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+  label_smoothing: 0.0
+
+batch_size: 32
+num_workers: 8
+
+logging:
+  experiment_name: envnet_v2_esc50_optimization_exp
+checkpoint:
+  monitor: val/acc
+  mode: max
+  dirpath: checkpoints
+  save_top_k: 3
+
+# Optuna configuration
+optuna:
+  # Study configuration
+  study_name: "envnet_v2_esc50_optimization"
+  direction: "maximize"  # maximize validation accuracy
+  storage_path: "optuna_studies.db"  # SQLite database path
+
+  # Optimization settings
+  n_trials: 100
+  timeout: null  # No timeout by default (set in seconds if needed)
+
+  # TPE Sampler configuration
+  sampler:
+    n_startup_trials: 10      # Number of random trials before TPE kicks in
+    n_ei_candidates: 24       # Number of candidates for Expected Improvement
+    seed: 42                  # Random seed for reproducibility
+
+  # Hyperband Pruner configuration
+  pruner:
+    min_resource: 1           # Start with 1 epoch minimum
+    max_resource: 100         # Up to 100 epochs maximum  
+    reduction_factor: 2       # Keep top 50%, prune bottom 50%
+
+  # Monitoring configuration
+  monitor: "val/acc"          # Metric to optimize
+  mode: "max"                 # Maximize the metric
+  min_epochs: 20              # Minimum epochs before pruning
+
+  # MLflow integration
+  mlflow_experiment_name: "optuna_hyperparameter_optimization"
+
+  # Output configuration
+  output_dir: "outputs/optimization"
+  best_config_path: "best_config.yaml" 

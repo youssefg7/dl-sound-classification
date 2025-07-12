@@ -13,7 +13,7 @@ hydra:
 seed: 42
 
 trainer:
-  max_epochs: 10
+  max_epochs: 1000
   accelerator: auto        # picks GPU if available
   precision: 16-mixed      # mixed-precision
   devices: 1
