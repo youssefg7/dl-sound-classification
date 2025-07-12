@@ -1,25 +1,18 @@
 # =============================================================================
 # ESC-50 Dataset Configuration (Consolidated)
 # =============================================================================
-# Supports both AST (spectrogram) and EnvNet-v2 (waveform) modes with automatic
-# constraint validation and preprocessing pipeline selection.
+# Pure dataset configuration - model-specific parameters are now in model configs
+# Supports both AST and EnvNet-v2 models through model config overrides
 # 
-# QUICK SETUP EXAMPLES:
-# =====================
-# 
-# AST with Mixup + SpecAugment:
-#   is_spectrogram: true
-#   enable_mixup: true
-#   time_mask: 192
-#   freq_mask: 48
-#   mixup_alpha: 0.5
-# 
-# EnvNet-v2 with BC Mixing:
-#   is_spectrogram: false  
-#   enable_bc_mixing: true
-#   time_mask: false
-#   freq_mask: false
+# USAGE:
+# ======
+# Model-specific settings are now defined in:
+# - configs/model/ast.yaml (SpecAugment, spectrogram preprocessing)
+# - configs/model/envnet_v2.yaml (waveform preprocessing, augmentation)
 #
+# Training examples:
+# python train.py model=ast dataset=esc50
+# python train.py model=envnet_v2 dataset=esc50
 # =============================================================================
 
 _target_: src.datasets.esc50.ESC50DataModule
@@ -29,55 +22,18 @@ fold: 0                # Range: 0-4 (ESC-50 uses 5-fold CV)
 val_split: 0.1         # Range: 0.0-0.5 (fraction of training data for validation)
 
 # =============================================================================
-# MAIN CONFIGURATION PARAMETERS
+# DATASET-SPECIFIC PARAMETERS
 # =============================================================================
 
-# Primary mode selector: determines preprocessing pipeline
-is_spectrogram: false   # true = AST mode (spectrograms), false = EnvNet-v2 mode (waveforms)
-
-# Augmentation settings (with AUTOMATIC constraint validation)
-# CONSTRAINT: BC mixing ONLY with waveforms (is_spectrogram=false)
-# CONSTRAINT: Mixup ONLY with spectrograms (is_spectrogram=true)
-enable_bc_mixing: false  # Boolean: BC mixing for waveform models (EnvNet-v2)
-enable_mixup: false      # Boolean: Mixup for spectrogram models (AST)
+# Augmentation settings for dataset-level configuration
+# Model configs will override these with their specific requirements
+enable_bc_mixing: false  # Boolean: BC mixing (for waveform models)
+enable_mixup: false      # Boolean: Mixup (for spectrogram models)
 mixup_alpha: 0.5        # Range: 0.1-2.0, typical: 0.5-1.0 (Beta distribution parameter)
 
-# SpecAugment parameters (ONLY used when is_spectrogram=true)
-# AST paper defaults: time_mask=192, freq_mask=48
-time_mask: false        # false OR integer 1-300, recommended: 80-192
-freq_mask: false        # false OR integer 1-80, recommended: 32-48
-
-# =============================================================================
-# PREPROCESSING CONFIGURATION
-# =============================================================================
-
-# Preprocessing mode - AUTOMATICALLY set based on is_spectrogram
-# Values: "ast" (if is_spectrogram=true) OR "envnet_v2" (if is_spectrogram=false)
-preprocessing_mode: envnet_v2  # Default, overridden automatically
-
-# Base preprocessing configuration
-preprocessing_config:
-  sample_rate: 44100     # Range: 8000-48000, standard: 44100
-  
-  # Spectrogram settings (used when is_spectrogram=true)
-  n_mels: 128           # Range: 64-256, AST default: 128
-  normalize: ${is_spectrogram}  # Boolean: normalize spectrograms for AST
-  target_mean: 0.0      # Range: -1.0 to 1.0, AST paper: 0.0
-  target_std: 0.5       # Range: 0.1-1.0, AST paper: 0.5
-  
-  # Waveform settings (used when is_spectrogram=false)
-  window_length: 5.0    # Range: 1.0-10.0 seconds, EnvNet-v2 default: 5.0
-  padding_ratio: 0.5    # Range: 0.0-1.0, affects random cropping
-  
-  # Waveform augmentation (used when is_spectrogram=false)
-  augment:
-    time_stretch: [0.8, 1.25]  # Range: [0.5-0.9, 1.1-2.0], affects tempo
-    gain_shift: [-6, 6]        # Range: [-12, 12] dB, affects volume
-
-# Legacy augmentation structure (automatically configured from above)
-augment:
-  time_mask: ${time_mask}
-  freq_mask: ${freq_mask}
+# Base preprocessing configuration (overridden by model configs)
+preprocessing_mode: auto  # Will be set by model config
+sample_rate: 44100       # Standard audio sample rate
 
 # =============================================================================
 # DATALOADER CONFIGURATION  

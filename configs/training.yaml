@@ -1,57 +1,29 @@
 # =============================================================================
-# Training Configuration (AST Model)
+# Generic Training Configuration
 # =============================================================================
-# Default configuration for Audio Spectrogram Transformer training.
+# Generic training configuration that works with any model.
+# Specify the model using command line overrides.
 # 
-# EXPERIMENT EXAMPLES:
-# ====================
+# USAGE EXAMPLES:
+# ===============
 # 
-# 1. AST with Mixup + SpecAugment:
-#    python train.py dataset.enable_mixup=true dataset.time_mask=192 dataset.freq_mask=48
+# AST Training (automatically enables Mixup):
+#   python train.py model=ast
+#   python train.py model=ast dataset.mixup_alpha=0.8
+#   python train.py model=ast model.dataset_overrides.augment.time_mask=100
 #
-# 2. AST with only SpecAugment:
-#    python train.py dataset.time_mask=192 dataset.freq_mask=48
+# EnvNet-v2 Training (automatically enables BC mixing):
+#   python train.py model=envnet_v2
+#   python train.py model=envnet_v2 dataset.enable_bc_mixing=false
+#   python train.py model=envnet_v2 model.dataset_overrides.preprocessing_config.window_length=3.0
 #
-# 3. AST baseline (no augmentation):
-#    python train.py (current default)
-#
-# 4. AST with custom parameters:
-#    python train.py optimizer.lr=0.0005 trainer.max_epochs=100 batch_size=16
-#
-# RECOMMENDED AST SETTINGS:
-# =========================
-# - Learning rate: 0.0005 (transformer models need lower LR)
-# - Batch size: 16-32 (smaller for transformers)
-# - Epochs: 100-200
-# - Weight decay: 1e-6
-# - Mixup alpha: 0.5
-# - Time mask: 192, Freq mask: 48 (AST paper defaults)
 # =============================================================================
 
 defaults:
   - base_training
   - dataset: esc50
-  - model: ast
+  - model: ast  # Default model (can be overridden)
   - _self_
-
-# Override dataset for AST mode (spectrograms)
-dataset:
-  is_spectrogram: true     # REQUIRED for AST
-  enable_mixup: false      # Set to true for Mixup experiments
-  enable_bc_mixing: false  # CANNOT be true with spectrograms (enforced)
-  time_mask: false         # Set to 192 for SpecAugment
-  freq_mask: false         # Set to 48 for SpecAugment
-  mixup_alpha: 0.5         # Used when enable_mixup=true
-
-# AST-optimized training settings (uncomment to use)
-# optimizer:
-#   lr: 0.0005             # Lower LR for transformers
-#   weight_decay: 1e-6     # Less regularization
-# 
-# trainer:
-#   max_epochs: 100        # Transformers converge faster
-# 
-# batch_size: 16           # Smaller batch size for memory
 
 hydra:
   run:
@@ -59,11 +31,11 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: ast_esc50
+  experiment_name: generic_training
   
 checkpoint:
   monitor: val/acc
   mode: max
   dirpath: checkpoints
   save_top_k: 3
-  filename: "ast-{epoch:02d}-{val/acc:.3f}" 
+  filename: "model-{epoch:02d}-{val/acc:.3f}" 

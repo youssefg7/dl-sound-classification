@@ -1,9 +1,14 @@
-# Hyperparameter space for loss function parameters
-# This file defines the search space for loss-related hyperparameters
+# =============================================================================
+# Loss Function Hyperparameter Space
+# =============================================================================
+# Defines search space for loss function parameters.
+# Works with both AST and EnvNet-v2 models.
+# =============================================================================
 
 # Loss function hyperparameters
 loss:
   # Label smoothing for cross-entropy loss
+  # Often helpful for transformers (AST), less critical for CNNs (EnvNet-v2)
   label_smoothing:
     type: float
     low: 0.0

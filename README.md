@@ -81,10 +81,7 @@ python scripts/prepare_esc50.py
 ### Quick Start
 ```bash
 # Basic training
-python scripts/train.py
-
-# Custom parameters
-python scripts/train.py optimizer.lr=0.001 batch_size=64 trainer.max_epochs=50
+python scripts/train.py model=envnet_v2 (default is ast)
 ```
 
 ### Hyperparameter Optimization

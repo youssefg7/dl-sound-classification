@@ -1,0 +1,32 @@
+# =============================================================================
+# AST Model Hyperparameter Space
+# =============================================================================
+# Defines search space for AST model constructor parameters.
+# Preprocessing and augmentation parameters are handled automatically by model config.
+# =============================================================================
+
+model:
+  # Patch size for transformer patches (affects model capacity and resolution)
+  patch_size:
+    type: categorical
+    choices: [12, 16, 20, 24]
+  
+  # Patch stride for patch extraction (affects overlap and computational cost)
+  patch_stride:
+    type: categorical
+    choices: [8, 10, 12, 14, 16]
+  
+  # Overlap between patches (affects information sharing)
+  overlap:
+    type: categorical
+    choices: [4, 6, 8, 10]
+  
+  # Pretrained Vision Transformer model (different capacities)
+  pretrained_model:
+    type: categorical
+    choices: [
+      "deit_tiny_patch16_224",
+      "deit_small_patch16_224", 
+      "deit_base_patch16_224",
+      "deit_base_patch16_384"
+    ] 

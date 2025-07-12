@@ -171,7 +171,7 @@ class OptunaTrainer:
         from src.training.engine import build_from_cfg
         from hydra.utils import instantiate
         
-        # Build datamodule
+        # Build datamodule with model-specific overrides
         datamodule_cfg = {
             "_target_": config.dataset._target_,
             "root": config.dataset.root,
@@ -179,12 +179,38 @@ class OptunaTrainer:
             "val_split": config.dataset.val_split,
             "batch_size": config.batch_size,
             "num_workers": config.num_workers,
-            "augment": config.dataset.augment,
+            "num_classes": config.dataset.get("num_classes", 50),
+            # Dataset-level augmentation settings
+            "enable_bc_mixing": config.dataset.get("enable_bc_mixing", False),
+            "enable_mixup": config.dataset.get("enable_mixup", False),
+            "mixup_alpha": config.dataset.get("mixup_alpha", 0.5),
         }
+        
+        # Extract dataset overrides from model config before creating the model
+        model_cfg = dict(config.model)
+        dataset_overrides = model_cfg.pop("dataset_overrides", None)
+        
+        # Apply model-specific dataset overrides if they exist
+        if dataset_overrides:
+            for key, value in dataset_overrides.items():
+                datamodule_cfg[key] = value
+        else:
+            # Fallback to default values
+            datamodule_cfg.update({
+                "preprocessing_mode": config.dataset.get("preprocessing_mode", "envnet_v2"),
+                "preprocessing_config": config.dataset.get("preprocessing_config", {}),
+                "augment": config.dataset.get("augment", {}),
+                "is_spectrogram": config.dataset.get("is_spectrogram", False),
+            })
+        
+        # Create datamodule with merged config
         datamodule = instantiate(datamodule_cfg)
         
-        # Build model
-        model = build_from_cfg(config)
+        # Build model with clean config (without dataset_overrides)
+        from omegaconf import OmegaConf
+        clean_model_cfg = OmegaConf.create(model_cfg)
+        clean_config = OmegaConf.create(dict(config, model=clean_model_cfg))
+        model = build_from_cfg(clean_config)
         
         return model, datamodule
     
@@ -281,9 +307,13 @@ class OptunaTrainer:
             if hasattr(trainer.lightning_module, 'val_acc'):
                 try:
                     val_acc_obj = trainer.lightning_module.val_acc
-                    val_acc = val_acc_obj.compute()
-                    print(f"✓ Computed val_acc directly: {val_acc}")
-                    return float(val_acc)
+                    # Check if it's a metric object with compute method
+                    if hasattr(val_acc_obj, 'compute') and callable(getattr(val_acc_obj, 'compute')):
+                        val_acc = val_acc_obj.compute()  # type: ignore
+                        print(f"✓ Computed val_acc directly: {val_acc}")
+                        return float(val_acc)
+                    else:
+                        print(f"⚠ val_acc object doesn't have compute method")
                 except Exception as e:
                     print(f"⚠ Error computing val_acc: {e}")
         

@@ -1,3 +1,46 @@
+# =============================================================================
+# EnvNet-v2 Model Configuration
+# =============================================================================
+# Model constructor parameters and dataset overrides for EnvNet-v2-specific preprocessing.
+#
+# Reference: Learning Environmental Sounds with End-to-End Convolutional Neural Network
+# EnvNet-v2 uses raw waveform inputs with temporal augmentation
+# =============================================================================
+
 _target_: src.models.envnet_v2.EnvNetV2
 num_classes: ${dataset.num_classes}
-dropout: 0.5
+
+# EnvNet-v2 model constructor parameters
+dropout: 0.5                          # Dropout rate for classifier layers
+
+# =============================================================================
+# ENVNET-V2-SPECIFIC DATASET OVERRIDES
+# =============================================================================
+# These parameters override dataset settings for EnvNet-v2 models
+# They are used by the training script, not passed to the model constructor
+dataset_overrides:
+  preprocessing_mode: envnet_v2
+  is_spectrogram: false
+  
+  # EnvNet-v2 benefits from BC mixing (recommended for waveform models) 
+  enable_mixup: false                # Not used with waveform models
+  enable_bc_mixing: true             # Recommended for EnvNet-v2
+  
+  # No SpecAugment for waveform models
+  augment:
+    time_mask: false                   # Disabled for waveform models
+    freq_mask: false                   # Disabled for waveform models
+  
+  # Waveform preprocessing settings
+  preprocessing_config:
+    sample_rate: 44100                 # Standard audio sample rate
+    
+    # Waveform-specific settings
+    window_length: 5.0                 # Range: 1.0-10.0 seconds, EnvNet-v2 default: 5.0
+    padding_ratio: 0.5                 # Range: 0.0-1.0, affects random cropping
+    
+    # Waveform augmentation (EnvNet-v2 specific)
+    augment:
+      time_stretch: [0.8, 1.25]       # Range: [0.5-0.9, 1.1-2.0], affects tempo
+      gain_shift: [-6, 6]              # Range: [-12, 12] dB, affects volume
+

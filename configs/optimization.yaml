@@ -1,32 +1,8 @@
 # =============================================================================
-# Optimization Configuration (EnvNet-v2 Model)
+# Optimization Configuration (EnvNet-v2)
 # =============================================================================
-# Configuration for EnvNet-v2 training with BC mixing and hyperparameter optimization.
-# 
-# EXPERIMENT EXAMPLES:
-# ====================
-# 
-# 1. EnvNet-v2 with BC mixing (default):
-#    python train.py -cn optimization
-#
-# 2. EnvNet-v2 without augmentation:
-#    python train.py -cn optimization dataset.enable_bc_mixing=false
-#
-# 3. EnvNet-v2 with custom window length:
-#    python train.py -cn optimization dataset.preprocessing_config.window_length=3.0
-#
-# 4. EnvNet-v2 with different augmentation settings:
-#    python train.py -cn optimization dataset.preprocessing_config.augment.gain_shift='[-10,10]'
-#
-# RECOMMENDED ENVNET-V2 SETTINGS:
-# ================================
-# - Learning rate: 0.001-0.01 (higher than transformers)
-# - Batch size: 32-64 (larger batches work well)
-# - Epochs: 200-300 (needs more epochs than AST)
-# - Weight decay: 1e-4
-# - BC mixing: true (significant improvement)
-# - Window length: 3.0-5.0 seconds
-# - Loss function: KLDivLoss for BC mixing, CrossEntropyLoss otherwise
+# Configuration for EnvNet-v2 hyperparameter optimization.
+# Model-specific preprocessing settings are automatically applied from model config.
 # =============================================================================
 
 defaults:
@@ -34,14 +10,6 @@ defaults:
   - dataset: esc50
   - model: envnet_v2
   - _self_
-
-# Override dataset for EnvNet-v2 mode (waveforms)
-dataset:
-  is_spectrogram: false    # REQUIRED for EnvNet-v2
-  enable_bc_mixing: true   # BC mixing for EnvNet-v2 (recommended)
-  enable_mixup: false      # CANNOT be true with waveforms (enforced)
-  time_mask: false         # Ignored in waveform mode
-  freq_mask: false         # Ignored in waveform mode
 
 hydra:
   run:
@@ -64,7 +32,7 @@ loss:
   label_smoothing: 0.0
 
 logging:
-  experiment_name: envnet_v2_esc50_optimization_exp
+  experiment_name: envnet_v2_esc50_optimization
 
 # Optuna configuration
 optuna:

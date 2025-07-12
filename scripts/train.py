@@ -68,7 +68,7 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
     # --------------------------------------------------------------------- #
     # 1)  Instantiate DataModule & LightningModule
     # --------------------------------------------------------------------- #
-    # Build complete datamodule configuration including preprocessing settings
+    # Build complete datamodule configuration merging model-specific overrides
     datamodule_cfg = {
         "_target_": cfg.dataset._target_,
         "root": cfg.dataset.root,
@@ -76,17 +76,40 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
         "val_split": cfg.dataset.val_split,
         "batch_size": cfg.batch_size,
         "num_workers": cfg.num_workers,
-        "augment": cfg.dataset.augment,
-        # Add preprocessing configuration for model-specific preprocessing
-        "preprocessing_mode": cfg.dataset.get("preprocessing_mode", "envnet_v2"),
-        "preprocessing_config": cfg.dataset.get("preprocessing_config", {}),
+        "num_classes": cfg.dataset.get("num_classes", 50),
+        # Dataset-level augmentation settings
         "enable_bc_mixing": cfg.dataset.get("enable_bc_mixing", False),
         "enable_mixup": cfg.dataset.get("enable_mixup", False),
         "mixup_alpha": cfg.dataset.get("mixup_alpha", 0.5),
-        "num_classes": cfg.dataset.get("num_classes", 50),
     }
+    
+    # Extract dataset overrides from model config before creating the model
+    model_cfg = dict(cfg.model)
+    dataset_overrides = model_cfg.pop("dataset_overrides", None)
+    
+    # Apply model-specific dataset overrides if they exist
+    if dataset_overrides:
+        for key, value in dataset_overrides.items():
+            datamodule_cfg[key] = value
+        print(f"✓ Applied model-specific dataset overrides: {list(dataset_overrides.keys())}")
+    else:
+        # Fallback to default values
+        datamodule_cfg.update({
+            "preprocessing_mode": cfg.dataset.get("preprocessing_mode", "envnet_v2"),
+            "preprocessing_config": cfg.dataset.get("preprocessing_config", {}),
+            "augment": cfg.dataset.get("augment", {}),
+            "is_spectrogram": cfg.dataset.get("is_spectrogram", False),
+        })
+        print("⚠ No model-specific dataset overrides found, using defaults")
+    
+    # Create datamodule with merged config
     datamodule = instantiate(datamodule_cfg)
-    lit_model = build_from_cfg(cfg)  # generic classifier
+    
+    # Create model config without dataset_overrides for clean instantiation
+    from omegaconf import OmegaConf
+    clean_model_cfg = OmegaConf.create(model_cfg)
+    clean_cfg = OmegaConf.create(dict(cfg, model=clean_model_cfg))
+    lit_model = build_from_cfg(clean_cfg)  # generic classifier
 
     # --------------------------------------------------------------------- #
     # 2)  MLflow logger & autolog

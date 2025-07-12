@@ -1,2 +1,44 @@
+# =============================================================================
+# AST (Audio Spectrogram Transformer) Model Configuration
+# =============================================================================
+# Model constructor parameters and dataset overrides for AST-specific preprocessing.
+#
+# Reference: AST: Audio Spectrogram Transformer (Gong et al., 2021)
+# Paper defaults: time_mask=192, freq_mask=48, n_mels=128
+# =============================================================================
+
 _target_: src.models.ast.ASTModel
 num_classes: ${dataset.num_classes}
+
+# AST model constructor parameters
+sample_rate: 44100                    # Standard audio sample rate
+patch_size: 16                        # Patch size for transformer
+patch_stride: 10                      # Stride for patch extraction
+overlap: 6                            # Overlap between patches
+pretrained_model: deit_base_patch16_384  # Pretrained ViT model
+
+# =============================================================================
+# AST-SPECIFIC DATASET OVERRIDES
+# =============================================================================
+# These parameters override dataset settings for AST models
+# They are used by the training script, not passed to the model constructor
+dataset_overrides:
+  preprocessing_mode: ast
+  is_spectrogram: true
+  
+  # AST benefits from Mixup augmentation (recommended for transformers)
+  enable_mixup: true
+  enable_bc_mixing: false            # Not compatible with spectrogram mode
+  
+  # SpecAugment parameters (AST paper defaults)
+  augment:
+    time_mask: 192                    # Range: 1-300, AST paper: 192, set to false to disable
+    freq_mask: 48                     # Range: 1-80, AST paper: 48, set to false to disable
+  
+  # Spectrogram preprocessing settings
+  preprocessing_config:
+    sample_rate: 44100                # Standard audio sample rate
+    n_mels: 128                       # Range: 64-256, AST paper default: 128
+    normalize: true                   # Boolean: normalize spectrograms for AST
+    target_mean: 0.0                  # Range: -1.0 to 1.0, AST paper: 0.0
+    target_std: 0.5                   # Range: 0.1-1.0, AST paper: 0.5
