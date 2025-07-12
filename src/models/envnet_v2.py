@@ -61,44 +61,6 @@ class EnvNetV2(nn.Module):
         )
 
         self._init_weights()
-
-
-        # # 1-D conv front-end over raw waveform (kernel=64, stride=2)
-        # self.conv1d = nn.Sequential(
-        #     nn.Conv1d(1, 64, kernel_size=64, stride=2, bias=False),
-        #     nn.BatchNorm1d(64),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool1d(8, stride=8),
-        #     nn.Conv1d(64, 64, kernel_size=16, bias=False),
-        #     nn.BatchNorm1d(64),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool1d(4, stride=4),
-        # )
-
-        # # Collapse time dim → treat as pseudo-image (C, T) → (1, C, T)
-        # self.conv2d = nn.Sequential(
-        #     nn.Conv2d(1, 64, (1, 3), bias=False),  # Use (1, 3) for height=1 input
-        #     nn.BatchNorm2d(64),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d((1, 2)),  # Pool only in width dimension
-        #     nn.Conv2d(64, 128, (1, 3), bias=False),
-        #     nn.BatchNorm2d(128),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d((1, 2)),
-        #     nn.Conv2d(128, 256, (1, 3), bias=False),
-        #     nn.BatchNorm2d(256),
-        #     nn.ReLU(inplace=True),
-        #     nn.MaxPool2d((1, 2)),
-        # )
-
-        # self.classifier = nn.Sequential(
-        #     nn.Dropout(dropout),
-        #     nn.Linear(256, 256),
-        #     nn.ReLU(inplace=True),
-        #     nn.Dropout(dropout),
-        #     nn.Linear(256, num_classes),
-        # )
-        
     def _init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

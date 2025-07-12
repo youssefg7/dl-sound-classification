@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import timm
-import torchaudio.transforms as T
 
 
 class ASTModel(nn.Module):
@@ -14,20 +13,8 @@ class ASTModel(nn.Module):
         self.emb_dim = 768
         self.num_classes = num_classes
 
-        # Audio frontend
-        self.melspec = T.MelSpectrogram(
-            sample_rate=sample_rate,
-            n_fft=1024,
-            hop_length=160,
-            win_length=400,
-            n_mels=self.f_dim
-        )
-        self.db = T.AmplitudeToDB(top_db=80)
-
-        # Estimate time dimension
-        with torch.no_grad():
-            dummy = torch.randn(1, sample_rate * 5)
-            self.t_dim = self.db(self.melspec(dummy)).shape[-1]
+        # Estimate time dimension for typical 10-second clips (our preprocessing uses hop_length=160)
+        self.t_dim = int((sample_rate * 10) / 160) + 1
 
         # Positional embedding interpolation grid
         self.old_grid = (24, 24)
@@ -40,14 +27,14 @@ class ASTModel(nn.Module):
         vit = timm.create_model(pretrained_model, pretrained=True)
         self.patch_embed = nn.Conv2d(1, self.emb_dim, kernel_size=patch_size, stride=patch_stride, bias=True)
         with torch.no_grad():
-            self.patch_embed.weight.copy_(vit.patch_embed.proj.weight.mean(dim=1, keepdim=True))
-            self.patch_embed.bias.copy_(vit.patch_embed.proj.bias)
+            self.patch_embed.weight.copy_(vit.patch_embed.proj.weight.mean(dim=1, keepdim=True))  # type: ignore
+            self.patch_embed.bias.copy_(vit.patch_embed.proj.bias)  # type: ignore
 
-        self.cls_token = nn.Parameter(vit.cls_token.clone())
-        self.pos_embed = nn.Parameter(self.interpolate_pos_embed(vit.pos_embed))
+        self.cls_token = nn.Parameter(vit.cls_token.clone())  # type: ignore
+        self.pos_embed = nn.Parameter(self.interpolate_pos_embed(vit.pos_embed))  # type: ignore
 
-        self.transformer = vit.blocks
-        self.norm = vit.norm
+        self.transformer = vit.blocks  # type: ignore
+        self.norm = vit.norm  # type: ignore
         self.head = nn.Linear(self.emb_dim, num_classes)
 
     def interpolate_pos_embed(self, pos_embed):
@@ -59,18 +46,16 @@ class ASTModel(nn.Module):
         return torch.cat((cls, patch), dim=1)
 
     def forward(self, x):
-        # x: (B, 1, T) or (B, 1, 1, T)
-        if x.dim() == 4 and x.shape[2] == 1:
-            x = x.squeeze(2)
+        # x: (B, F, T) - preprocessed log-mel spectrogram from ASTPreprocessor
         if x.dim() == 3:
-            x = self.db(self.melspec(x.squeeze(1))).unsqueeze(1)
+            x = x.unsqueeze(1)  # Add channel dimension: (B, 1, F, T)
 
         x = self.patch_embed(x)
         x = x.flatten(2).transpose(1, 2)
         cls = self.cls_token.expand(x.shape[0], -1, -1)
         x = torch.cat((cls, x), dim=1)
         x = x + self.pos_embed[:, :x.size(1)]
-        for blk in self.transformer:
+        for blk in self.transformer:  # type: ignore
             x = blk(x)
-        x = self.norm(x)
+        x = self.norm(x)  # type: ignore
         return torch.sigmoid(self.head(x[:, 0]))

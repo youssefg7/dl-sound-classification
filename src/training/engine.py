@@ -132,16 +132,35 @@ class LitClassifier(pl.LightningModule):
             x, y = batch 
 
         logits = self(x)
-        loss = self.criterion(logits, y)
+        
+        # Handle both hard labels (int) and soft labels (float tensor)
+        if y.dtype == torch.float32 and y.dim() > 1:
+            # Soft labels (e.g., from BC mixing) - use KL divergence or similar
+            if hasattr(self.criterion, '__class__') and 'KL' in self.criterion.__class__.__name__:
+                # For KL divergence loss, convert logits to log probabilities
+                log_probs = torch.nn.functional.log_softmax(logits, dim=1)
+                loss = self.criterion(log_probs, y)
+            else:
+                # For other losses (like CrossEntropy), convert soft labels to probabilities
+                # and use as target for soft cross-entropy
+                probs = torch.nn.functional.softmax(logits, dim=1)
+                loss = -torch.sum(y * torch.log(probs + 1e-8), dim=1).mean()
+            
+            # For metrics, convert soft labels to hard labels (argmax)
+            hard_labels = torch.argmax(y, dim=1)
+        else:
+            # Hard labels (standard case)
+            loss = self.criterion(logits, y)
+            hard_labels = y
 
         # Lightning metric logging
         self.log(f"{stage}/loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         if stage == "train":
-            self.train_acc.update(logits, y)
+            self.train_acc.update(logits, hard_labels)
         elif stage == "val":
-            self.val_acc.update(logits, y)
+            self.val_acc.update(logits, hard_labels)
         elif stage == "test":
-            self.test_acc.update(logits, y)
+            self.test_acc.update(logits, hard_labels)
 
         return loss
 

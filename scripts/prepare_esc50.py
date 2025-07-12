@@ -5,7 +5,7 @@ Prepare ESC-50 for fast PyTorch training.
 This script:
 1. Validates the presence and schema of meta/esc50.csv
 2. Verifies SHA-256 (optional: skip with --no-hash)
-3. Loads each WAV, forces mono 44.1 kHz, normalises [-1, 1]
+3. Loads each WAV, forces mono 44.1 kHz, normalizes to [-1, 1]
 4. Saves torch tensors under data/processed/esc50/fold_{k}/{clip_id}.pt
 5. Emits dataset_stats.json with clip counts, duration, and class histogram
 """
@@ -17,7 +17,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
 
 import pandas as pd  # type: ignore
 import torch
@@ -70,7 +70,7 @@ def prepare_esc50(validate_hash: bool = True) -> None:
         raise FileNotFoundError(f"Metadata CSV not found at {META_CSV}")
     df = pd.read_csv(META_CSV)
 
-    stats: Dict[str, int | float] = {
+    stats: Dict[str, Any] = {
         "num_clips": len(df),
         "total_duration_sec": 0.0,
         "class_histogram": {},
@@ -78,9 +78,9 @@ def prepare_esc50(validate_hash: bool = True) -> None:
 
     for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing ESC-50"):
         fold = int(row["fold"])  # 1-based → 1…5
-        category = row["category"]
+        category = str(row["category"])
         label = int(row["target"])
-        filename = row["filename"]
+        filename = str(row["filename"])
 
         wav_path = RAW_DIR / "audio" / filename
         if not wav_path.exists():
@@ -94,6 +94,11 @@ def prepare_esc50(validate_hash: bool = True) -> None:
         wave, sr = torchaudio.load(str(wav_path))
         wave = resample_if_needed(wave, sr)
         wave = torch.mean(wave, dim=0, keepdim=True)  # ensure mono
+        
+        # Normalize to [-1, 1] range
+        max_val = torch.max(torch.abs(wave))
+        if max_val > 0:
+            wave = wave / max_val
 
         # duration
         stats["total_duration_sec"] = float(stats["total_duration_sec"]) + (wave.shape[-1] / TARGET_SR)  # type: ignore[operator]
