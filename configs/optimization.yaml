@@ -1,17 +1,54 @@
+# =============================================================================
+# Optimization Configuration (EnvNet-v2 Model)
+# =============================================================================
+# Configuration for EnvNet-v2 training with BC mixing and hyperparameter optimization.
+# 
+# EXPERIMENT EXAMPLES:
+# ====================
+# 
+# 1. EnvNet-v2 with BC mixing (default):
+#    python train.py -cn optimization
+#
+# 2. EnvNet-v2 without augmentation:
+#    python train.py -cn optimization dataset.enable_bc_mixing=false
+#
+# 3. EnvNet-v2 with custom window length:
+#    python train.py -cn optimization dataset.preprocessing_config.window_length=3.0
+#
+# 4. EnvNet-v2 with different augmentation settings:
+#    python train.py -cn optimization dataset.preprocessing_config.augment.gain_shift='[-10,10]'
+#
+# RECOMMENDED ENVNET-V2 SETTINGS:
+# ================================
+# - Learning rate: 0.001-0.01 (higher than transformers)
+# - Batch size: 32-64 (larger batches work well)
+# - Epochs: 200-300 (needs more epochs than AST)
+# - Weight decay: 1e-4
+# - BC mixing: true (significant improvement)
+# - Window length: 3.0-5.0 seconds
+# - Loss function: KLDivLoss for BC mixing, CrossEntropyLoss otherwise
+# =============================================================================
+
 defaults:
-  - _self_
+  - base_training
   - dataset: esc50
   - model: envnet_v2
-  - override hydra/job_logging: none
-  - override hydra/hydra_logging: none
+  - _self_
+
+# Override dataset for EnvNet-v2 mode (waveforms)
+dataset:
+  is_spectrogram: false    # REQUIRED for EnvNet-v2
+  enable_bc_mixing: true   # BC mixing for EnvNet-v2 (recommended)
+  enable_mixup: false      # CANNOT be true with waveforms (enforced)
+  time_mask: false         # Ignored in waveform mode
+  freq_mask: false         # Ignored in waveform mode
 
 hydra:
   run:
     dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
   output_subdir: null
 
-seed: 42
-
+# Override trainer settings for optimization
 trainer:
   max_epochs: 1000
   accelerator: auto        # picks GPU if available
@@ -19,34 +56,15 @@ trainer:
   devices: 1
   log_every_n_steps: 10    # Log more frequently than default 50
 
-optimizer:
-  _target_: torch.optim.Adam
-  lr: 0.001
-  weight_decay: 1e-4
-
-scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  T_max: 100  # matches max_epochs
-
-metric:
-  _target_: torchmetrics.classification.Accuracy
-  task: multiclass
-  num_classes: ${dataset.num_classes}
-
+# Optimization-specific loss function
+# NOTE: For BC mixing, KLDivLoss often works better than CrossEntropyLoss
+# To use KL divergence: loss._target_=torch.nn.KLDivLoss loss.reduction=batchmean
 loss:
   _target_: torch.nn.CrossEntropyLoss
   label_smoothing: 0.0
 
-batch_size: 32
-num_workers: 8
-
 logging:
   experiment_name: envnet_v2_esc50_optimization_exp
-checkpoint:
-  monitor: val/acc
-  mode: max
-  dirpath: checkpoints
-  save_top_k: 3
 
 # Optuna configuration
 optuna:

@@ -1,45 +1,69 @@
+# =============================================================================
+# Training Configuration (AST Model)
+# =============================================================================
+# Default configuration for Audio Spectrogram Transformer training.
+# 
+# EXPERIMENT EXAMPLES:
+# ====================
+# 
+# 1. AST with Mixup + SpecAugment:
+#    python train.py dataset.enable_mixup=true dataset.time_mask=192 dataset.freq_mask=48
+#
+# 2. AST with only SpecAugment:
+#    python train.py dataset.time_mask=192 dataset.freq_mask=48
+#
+# 3. AST baseline (no augmentation):
+#    python train.py (current default)
+#
+# 4. AST with custom parameters:
+#    python train.py optimizer.lr=0.0005 trainer.max_epochs=100 batch_size=16
+#
+# RECOMMENDED AST SETTINGS:
+# =========================
+# - Learning rate: 0.0005 (transformer models need lower LR)
+# - Batch size: 16-32 (smaller for transformers)
+# - Epochs: 100-200
+# - Weight decay: 1e-6
+# - Mixup alpha: 0.5
+# - Time mask: 192, Freq mask: 48 (AST paper defaults)
+# =============================================================================
+
 defaults:
-  - _self_
+  - base_training
   - dataset: esc50
   - model: ast
-  - override hydra/job_logging: none
-  - override hydra/hydra_logging: none
+  - _self_
+
+# Override dataset for AST mode (spectrograms)
+dataset:
+  is_spectrogram: true     # REQUIRED for AST
+  enable_mixup: false      # Set to true for Mixup experiments
+  enable_bc_mixing: false  # CANNOT be true with spectrograms (enforced)
+  time_mask: false         # Set to 192 for SpecAugment
+  freq_mask: false         # Set to 48 for SpecAugment
+  mixup_alpha: 0.5         # Used when enable_mixup=true
+
+# AST-optimized training settings (uncomment to use)
+# optimizer:
+#   lr: 0.0005             # Lower LR for transformers
+#   weight_decay: 1e-6     # Less regularization
+# 
+# trainer:
+#   max_epochs: 100        # Transformers converge faster
+# 
+# batch_size: 16           # Smaller batch size for memory
 
 hydra:
   run:
     dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   output_subdir: null
 
-seed: 42
-
-trainer:
-  max_epochs: 1000
-  accelerator: auto        # picks GPU if available
-  precision: 16-mixed      # mixed-precision
-  devices: 1
-  # log_every_n_steps will be set dynamically based on steps per epoch
-
-optimizer:
-  _target_: torch.optim.Adam
-  lr: 0.001
-  weight_decay: 1e-4
-
-scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  T_max: 100  # matches max_epochs
-
-metric:
-  _target_: torchmetrics.classification.Accuracy
-  task: multiclass
-  num_classes: ${dataset.num_classes}
-
-batch_size: 32
-num_workers: 8
-
 logging:
   experiment_name: ast_esc50
+  
 checkpoint:
   monitor: val/acc
   mode: max
   dirpath: checkpoints
-  save_top_k: 3 
+  save_top_k: 3
+  filename: "ast-{epoch:02d}-{val/acc:.3f}" 

@@ -33,6 +33,87 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 
+def create_one_hot_labels(label: int, num_classes: int) -> torch.Tensor:
+    """
+    Create one-hot encoded soft labels.
+    
+    Args:
+        label: Class label index
+        num_classes: Total number of classes
+        
+    Returns:
+        One-hot encoded tensor of shape [num_classes]
+    """
+    soft_labels = torch.zeros(num_classes, dtype=torch.float32)
+    soft_labels[label] = 1.0
+    return soft_labels
+
+
+# AST Model Constants (Audio Spectrogram Transformer)
+AST_HOP_LENGTH = 160    # ~3.6ms at 44.1kHz
+AST_N_FFT = 1024        # AST model expects n_fft=1024
+AST_WIN_LENGTH = 400    # ~9.1ms at 44.1kHz
+
+
+def resample_waveform(waveform: torch.Tensor, current_rate: int, target_rate: int) -> torch.Tensor:
+    """
+    Resample waveform to target sample rate if needed.
+    
+    Args:
+        waveform: Input waveform tensor
+        current_rate: Current sample rate
+        target_rate: Target sample rate
+        
+    Returns:
+        Resampled waveform or original if rates match
+    """
+    if current_rate != target_rate:
+        resampler = torchaudio.transforms.Resample(current_rate, target_rate)
+        return resampler(waveform)
+    return waveform
+
+
+def create_ast_fallback_spectrogram(waveform: torch.Tensor, sample_rate: int, n_mels: int = 128) -> torch.Tensor:
+    """
+    Create AST-compatible log-mel spectrogram using fallback parameters.
+    
+    Args:
+        waveform: Input waveform tensor
+        sample_rate: Sample rate of the waveform
+        n_mels: Number of mel filter banks
+        
+    Returns:
+        Log-mel spectrogram tensor compatible with AST model
+    """
+    # Import here to avoid circular imports
+    try:
+        from ..utils.audio import melspectrogram
+    except ImportError:
+        from utils.audio import melspectrogram
+    
+    return melspectrogram(waveform, sample_rate, n_mels, AST_N_FFT, AST_HOP_LENGTH, log_scale=True)
+
+
+def load_audio_bundle(file_path: Path) -> Optional[Tuple[torch.Tensor, int]]:
+    """
+    Load audio bundle from file with consistent error handling.
+    
+    Args:
+        file_path: Path to the .pt file containing audio data
+        
+    Returns:
+        Tuple of (waveform, label) or None if loading failed
+    """
+    try:
+        bundle = torch.load(file_path, map_location='cpu')
+        waveform = bundle["waveform"]
+        label = bundle["label"]
+        return waveform, label
+    except Exception as e:
+        logger.warning(f"Failed to load {file_path}: {e}")
+        return None
+
+
 @dataclass
 class CacheStats:
     """Statistics for cache operations."""
@@ -467,14 +548,9 @@ class BCMixingDataset:
             file_iterator = file_paths
         
         for path in file_iterator:
-            try:
-                bundle = torch.load(path, map_location='cpu')
-                waveform = bundle["waveform"]
-                label = bundle["label"]
-                data.append((waveform, label))
-            except Exception as e:
-                logger.warning(f"Failed to load {path}: {e}")
-                continue
+            audio_data = load_audio_bundle(path)
+            if audio_data is not None:
+                data.append(audio_data)
         
         if show_progress:
             progress_bar.close()
@@ -498,16 +574,14 @@ class BCMixingDataset:
         """
         if not self.enable_bc_mixing or random.random() > 0.5:  # 50% chance of mixing
             # Return one-hot labels for non-mixed samples
-            soft_labels = torch.zeros(self.num_classes, dtype=torch.float32)
-            soft_labels[label] = 1.0
+            soft_labels = create_one_hot_labels(label, self.num_classes)
             return waveform, soft_labels
         
         # Find a sample from a different class
         different_class_samples = [(w, l) for w, l in all_data if l != label]
         if not different_class_samples:
             # No different class available, return original
-            soft_labels = torch.zeros(self.num_classes, dtype=torch.float32)
-            soft_labels[label] = 1.0
+            soft_labels = create_one_hot_labels(label, self.num_classes)
             return waveform, soft_labels
         
         # Sample a different class
@@ -551,8 +625,22 @@ class PreprocessingConfig:
                 'torch_version': torch.__version__,
                 'platform': platform.platform()
             }
+            # Convert any DictConfig/ListConfig objects to regular dicts/lists for JSON serialization
+            def convert_omegaconf(obj):
+                if hasattr(obj, '_content'):  # DictConfig check
+                    return {k: convert_omegaconf(v) for k, v in obj.items()}
+                elif hasattr(obj, '_content') or (hasattr(obj, '__iter__') and hasattr(obj, '__getitem__') and not isinstance(obj, str)):  # ListConfig check
+                    try:
+                        return [convert_omegaconf(item) for item in obj]
+                    except:
+                        return obj
+                else:
+                    return obj
+            
+            config_dict = convert_omegaconf(self.config)
+            
             config_str = json.dumps({
-                'config': self.config,
+                'config': config_dict,
                 'system_info': system_info
             }, sort_keys=True)
             self._hash = hashlib.md5(config_str.encode()).hexdigest()[:12]
@@ -699,12 +787,12 @@ class EnvNetPreprocessor(BasePreprocessor):
     
     def __init__(self, config: PreprocessingConfig):
         super().__init__(config)
-        self.window_length = getattr(config, 'window_length', 1.5)  # seconds
-        self.padding_ratio = getattr(config, 'padding_ratio', 0.5)  # T/2 padding
-        self.sample_rate = getattr(config, 'sample_rate', 44100)
-        self.bc_mixing = getattr(config, 'bc_mixing', True)
-        self.test_crops = getattr(config, 'test_crops', 10)
-        self.augment_config = getattr(config, 'augment', {})
+        self.window_length = config.config.get('window_length', 1.5)  # seconds
+        self.padding_ratio = config.config.get('padding_ratio', 0.5)  # T/2 padding
+        self.sample_rate = config.config.get('sample_rate', 44100)
+        self.bc_mixing = config.config.get('bc_mixing', True)
+        self.test_crops = config.config.get('test_crops', 10)
+        self.augment_config = config.config.get('augment', {})
         
         # Calculate sample lengths
         self.window_samples = int(self.window_length * self.sample_rate)
@@ -721,9 +809,7 @@ class EnvNetPreprocessor(BasePreprocessor):
         This method handles the deterministic preprocessing that can be cached.
         """
         # Resample if needed
-        if sample_rate != self.sample_rate:
-            resampler = torchaudio.transforms.Resample(sample_rate, self.sample_rate)
-            waveform = resampler(waveform)
+        waveform = resample_waveform(waveform, sample_rate, self.sample_rate)
         
         # Add padding for random cropping
         padded_waveform = F.pad(waveform, (self.padding_samples, self.padding_samples), mode='constant', value=0)
@@ -852,8 +938,7 @@ class MixupAugmentation:
         """
         if random.random() > self.prob:
             # No mixup, return original
-            labels = torch.zeros(num_classes, dtype=torch.float32)
-            labels[label1] = 1.0
+            labels = create_one_hot_labels(label1, num_classes)
             return spec1, labels
         
         # Sample mixing coefficient
@@ -878,16 +963,16 @@ class ASTPreprocessor(BasePreprocessor):
     
     def __init__(self, config: PreprocessingConfig):
         super().__init__(config)
-        self.n_mels = getattr(config, 'n_mels', 128)
-        self.sample_rate = getattr(config, 'sample_rate', 44100)
-        self.target_mean = getattr(config, 'target_mean', 0.0)
-        self.target_std = getattr(config, 'target_std', 0.5)
-        self.normalize = getattr(config, 'normalize', True)
+        self.n_mels = config.config.get('n_mels', 128)
+        self.sample_rate = config.config.get('sample_rate', 44100)
+        self.target_mean = config.config.get('target_mean', 0.0)
+        self.target_std = config.config.get('target_std', 0.5)
+        self.normalize = config.config.get('normalize', True)
         
         # AST paper parameters - match the model exactly
-        self.n_fft = 1024
-        self.hop_length = 160  # ~3.6ms at 44.1kHz
-        self.win_length = 400  # ~9.1ms at 44.1kHz
+        self.n_fft = AST_N_FFT
+        self.hop_length = AST_HOP_LENGTH
+        self.win_length = AST_WIN_LENGTH
         
         # Create mel spectrogram transform matching AST model
         self.mel_transform = torchaudio.transforms.MelSpectrogram(
@@ -903,7 +988,7 @@ class ASTPreprocessor(BasePreprocessor):
         self.amplitude_to_db = torchaudio.transforms.AmplitudeToDB(top_db=80)
         
         # Mixup augmentation
-        mixup_config = getattr(config, 'mixup', {})
+        mixup_config = config.config.get('mixup', {})
         if mixup_config.get('enabled', False):
             self.mixup = MixupAugmentation(
                 alpha=mixup_config.get('alpha', 0.5),
@@ -923,9 +1008,7 @@ class ASTPreprocessor(BasePreprocessor):
         but allows for caching and external augmentation.
         """
         # Resample if needed
-        if sample_rate != self.sample_rate:
-            resampler = torchaudio.transforms.Resample(sample_rate, self.sample_rate)
-            waveform = resampler(waveform)
+        waveform = resample_waveform(waveform, sample_rate, self.sample_rate)
         
         # Convert to mel spectrogram (matching AST model parameters)
         mel_spec = self.mel_transform(waveform)
@@ -982,8 +1065,7 @@ class ASTPreprocessor(BasePreprocessor):
             return self.mixup(spec1, spec2, label1, label2, num_classes)
         else:
             # No mixup, return original with one-hot label
-            labels = torch.zeros(num_classes, dtype=torch.float32)
-            labels[label1] = 1.0
+            labels = create_one_hot_labels(label1, num_classes)
             return spec1, labels
 
 
@@ -1066,13 +1148,12 @@ class PreprocessingCache:
         def process_file(file_path: Path) -> Tuple[int, Optional[torch.Tensor]]:
             """Process a single file and return (index, result)."""
             try:
-                # Load file
-                bundle = torch.load(file_path, map_location='cpu')
-                waveform = bundle.get("waveform", bundle.get("audio", None))
-                sample_rate = bundle.get("sample_rate", 44100)
+                audio_data = load_audio_bundle(file_path)
+                if audio_data is None:
+                    return file_paths.index(file_path), None
                 
-                if waveform is None:
-                    raise ValueError(f"No waveform found in {file_path}")
+                waveform, _ = audio_data  # We don't need the label for preprocessing
+                sample_rate = 44100  # Assume standard sample rate, could be configurable
                 
                 # Preprocess with caching
                 processed = preprocessor.preprocess_with_cache(waveform, sample_rate, file_path)

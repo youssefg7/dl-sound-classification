@@ -68,9 +68,7 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
     # --------------------------------------------------------------------- #
     # 1)  Instantiate DataModule & LightningModule
     # --------------------------------------------------------------------- #
-    # The datamodule's __init__ doesn't accept all keys in the config (e.g.,
-    # num_classes, which is metadata for the model), so we build a new config
-    # for it that only contains the arguments it knows about.
+    # Build complete datamodule configuration including preprocessing settings
     datamodule_cfg = {
         "_target_": cfg.dataset._target_,
         "root": cfg.dataset.root,
@@ -79,6 +77,13 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
         "batch_size": cfg.batch_size,
         "num_workers": cfg.num_workers,
         "augment": cfg.dataset.augment,
+        # Add preprocessing configuration for model-specific preprocessing
+        "preprocessing_mode": cfg.dataset.get("preprocessing_mode", "envnet_v2"),
+        "preprocessing_config": cfg.dataset.get("preprocessing_config", {}),
+        "enable_bc_mixing": cfg.dataset.get("enable_bc_mixing", False),
+        "enable_mixup": cfg.dataset.get("enable_mixup", False),
+        "mixup_alpha": cfg.dataset.get("mixup_alpha", 0.5),
+        "num_classes": cfg.dataset.get("num_classes", 50),
     }
     datamodule = instantiate(datamodule_cfg)
     lit_model = build_from_cfg(cfg)  # generic classifier

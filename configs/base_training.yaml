@@ -1,0 +1,96 @@
+# =============================================================================
+# Base Training Configuration
+# =============================================================================
+# Shared settings between training and optimization configurations.
+# Contains proven defaults and parameter ranges for audio classification.
+#
+# MODEL-SPECIFIC RECOMMENDATIONS:
+# ================================
+# AST (Audio Spectrogram Transformer):
+#   - lr: 0.0005 (lower for transformers)
+#   - batch_size: 16-32
+#   - max_epochs: 100-200
+#   - weight_decay: 1e-6
+#
+# EnvNet-v2:
+#   - lr: 0.001-0.01
+#   - batch_size: 32-64  
+#   - max_epochs: 200-300
+#   - weight_decay: 1e-4
+# =============================================================================
+
+defaults:
+  - _self_
+  - override hydra/job_logging: none
+  - override hydra/hydra_logging: none
+
+seed: 42                  # Range: any integer, for reproducibility
+
+# =============================================================================
+# TRAINER CONFIGURATION
+# =============================================================================
+trainer:
+  max_epochs: 1000        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
+  accelerator: auto       # Options: auto, gpu, cpu, tpu
+  precision: 16-mixed     # Options: 32, 16-mixed, bf16-mixed (faster training)
+  devices: 1              # Range: 1-8, number of GPUs/devices
+  log_every_n_steps: 50   # Range: 10-100, logging frequency
+
+# =============================================================================
+# OPTIMIZER CONFIGURATION  
+# =============================================================================
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001               # Range: 1e-5 to 1e-2, AST: 0.0005, EnvNet-v2: 0.001-0.01
+  weight_decay: 1e-4      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
+
+# =============================================================================
+# SCHEDULER CONFIGURATION
+# =============================================================================
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 100              # Should match max_epochs for full cycle
+
+# =============================================================================
+# LOSS FUNCTION CONFIGURATION
+# =============================================================================
+# NOTE: Loss function depends on augmentation type:
+# - CrossEntropyLoss: for Mixup (handles soft labels automatically)
+# - KLDivLoss: for BC mixing (better for soft label distributions)  
+# - Standard losses: for no augmentation
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+  label_smoothing: 0.0    # Range: 0.0-0.2, adds regularization
+
+# =============================================================================
+# METRICS CONFIGURATION
+# =============================================================================
+metric:
+  _target_: torchmetrics.classification.Accuracy
+  task: multiclass
+  num_classes: ${dataset.num_classes}
+
+# =============================================================================
+# TRAINING PARAMETERS
+# =============================================================================
+batch_size: 32            # Range: 8-128, AST: 16-32, EnvNet-v2: 32-64
+num_workers: 8            # Range: 0-16, depends on CPU cores
+
+# =============================================================================
+# CHECKPOINTING CONFIGURATION
+# =============================================================================
+checkpoint:
+  monitor: val/acc        # Options: val/acc, val/loss, train/loss
+  mode: max               # max for accuracy, min for loss
+  dirpath: checkpoints
+  save_top_k: 3           # Range: 1-10, number of best checkpoints to keep
+  filename: "epoch-{epoch:02d}-val_acc-{val/acc:.3f}"
+
+# =============================================================================
+# EARLY STOPPING CONFIGURATION
+# =============================================================================
+early_stop:
+  monitor: val/acc        # Same as checkpoint monitor
+  mode: max               # Same as checkpoint mode  
+  patience: 15            # Range: 5-50, AST: 15, EnvNet-v2: 20
+  min_delta: 0.001        # Range: 0.0001-0.01, minimum improvement threshold 
