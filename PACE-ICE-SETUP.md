@@ -111,9 +111,9 @@ git clone git@github.com:<org>/<repo>.git ~/dl-sound-classification
 - Request an interactive H100 session
 ```bash
 salloc --qos=coc-ice \
-       --gres=gpu:h100:1 \
+       --gres=gpu:h200:1 \
        --time=08:00:00 \
-       --cpus-per-task=8 --mem=64G \
+       --cpus-per-task=8 --mem=128G
 ```
 
 - Access the interactive session
