@@ -77,12 +77,29 @@ python scripts/prepare_esc50.py
 
 
 ## Training
-- Add a config file for the training
-- Run the training
 
+### Quick Start
 ```bash
+# Basic training
 python scripts/train.py
+
+# Custom parameters
+python scripts/train.py optimizer.lr=0.001 batch_size=64 trainer.max_epochs=50
 ```
+
+### Hyperparameter Optimization
+```bash
+# Run Optuna optimization with TPE + Hyperband pruning
+python scripts/optimize_hyperparams.py
+
+# Quick test with 5 trials
+python scripts/optimize_hyperparams.py optuna.n_trials=5
+
+# Analyze results
+python scripts/analyze_study.py --study-name "envnet_esc50_optimization_v1" --plots
+```
+
+📖 **For detailed training instructions, hyperparameter optimization, and best practices, see [TRAINING.md](TRAINING.md)**
 
 ## Experiment Tracking
 
@@ -107,7 +124,7 @@ NGROK_AUTHTOKEN=<your-actual-token-here>
 - Run the MLflow script:
 
 ```bash
-python scripts/mlflow.py
+python scripts/mlflow_ui.py
 ```
 
 - You’ll see a public URL like https://1234abcd.ngrok.io that anyone can open and see your experiments while you keep the server running.
