@@ -3,6 +3,12 @@
 # =============================================================================
 # Configuration for EnvNet-v2 hyperparameter optimization.
 # Model-specific preprocessing settings are automatically applied from model config.
+# 
+# NOTE: Trainer settings are configured in configs/base_training.yaml
+# Override specific settings via command line: trainer.precision=16-mixed trainer.log_every_n_steps=10
+# 
+# NOTE: Loss function is configured in configs/base_training.yaml
+# Override via command line: loss._target_=torch.nn.KLDivLoss loss.reduction=batchmean
 # =============================================================================
 
 defaults:
@@ -15,21 +21,6 @@ hydra:
   run:
     dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
   output_subdir: null
-
-# Override trainer settings for optimization
-trainer:
-  max_epochs: 1000
-  accelerator: auto        # picks GPU if available
-  precision: 16-mixed      # mixed-precision
-  devices: 1
-  log_every_n_steps: 10    # Log more frequently than default 50
-
-# Optimization-specific loss function
-# NOTE: For BC mixing, KLDivLoss often works better than CrossEntropyLoss
-# To use KL divergence: loss._target_=torch.nn.KLDivLoss loss.reduction=batchmean
-loss:
-  _target_: torch.nn.CrossEntropyLoss
-  label_smoothing: 0.0
 
 logging:
   experiment_name: envnet_v2_esc50_optimization

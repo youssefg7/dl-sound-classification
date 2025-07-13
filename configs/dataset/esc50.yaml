@@ -13,6 +13,8 @@
 # Training examples:
 # python train.py model=ast dataset=esc50
 # python train.py model=envnet_v2 dataset=esc50
+#
+# NOTE: batch_size and num_workers are configured in configs/base_training.yaml
 # =============================================================================
 
 _target_: src.datasets.esc50.ESC50DataModule
@@ -24,21 +26,18 @@ val_split: 0.1         # Range: 0.0-0.5 (fraction of training data for validatio
 # =============================================================================
 # DATASET-SPECIFIC PARAMETERS
 # =============================================================================
-
-# Augmentation settings for dataset-level configuration
-# Model configs will override these with their specific requirements
-enable_bc_mixing: false  # Boolean: BC mixing (for waveform models)
-enable_mixup: false      # Boolean: Mixup (for spectrogram models)
-mixup_alpha: 0.5        # Range: 0.1-2.0, typical: 0.5-1.0 (Beta distribution parameter)
+# NOTE: Augmentation settings (enable_mixup, enable_bc_mixing, mixup_alpha) are 
+# model-specific and defined in model configs (model/ast.yaml, model/envnet_v2.yaml)
+# 
+# NOTE: preprocessing_mode is model-specific and defined in model configs
 
 # Base preprocessing configuration (overridden by model configs)
-preprocessing_mode: auto  # Will be set by model config
 sample_rate: 44100       # Standard audio sample rate
 
 # =============================================================================
 # DATALOADER CONFIGURATION  
 # =============================================================================
-batch_size: 32          # Range: 8-128, AST: 16-32, EnvNet-v2: 32-64
-num_workers: 4          # Range: 0-8, depends on CPU cores
+# NOTE: batch_size and num_workers are configured in configs/base_training.yaml
+# These values are passed directly to the datamodule constructor by the training script
 pin_memory: true        # Boolean: faster GPU transfer
 persistent_workers: true # Boolean: faster epoch transitions

@@ -8,10 +8,12 @@
 # ====================================================
 # AST (Audio Spectrogram Transformer):
 #   - lr: 0.0005 (lower for transformers)
-#   - batch_size: 16-32
+#   - batch_size: 96-128 (larger for better GPU utilization - transformer bottleneck)
+#   - num_workers: 4 (reduced to avoid data loading bottleneck)
 #   - max_epochs: 100-200
 #   - weight_decay: 1e-6
 #   - precision: 16-mixed (transformers handle mixed precision well)
+#   - model: deit_small_patch16_224 (faster than deit_base_patch16_384)
 #
 # EnvNet-v2:
 #   - lr: 0.0001 (IMPORTANT: reduced from 0.001 to prevent gradient explosion)
@@ -26,8 +28,8 @@
 # EnvNet-v2 with recommended stable settings:
 #   python scripts/train.py model=envnet_v2 trainer.precision=32 optimizer.lr=0.0001
 #
-# AST with recommended settings:
-#   python scripts/train.py model=ast trainer.precision=16-mixed optimizer.lr=0.0005
+# AST with optimized settings (small model + large batch for speed):
+#   python scripts/train.py model=ast trainer.precision=16-mixed optimizer.lr=0.0005 batch_size=128 num_workers=4
 # =============================================================================
 
 defaults:
@@ -53,7 +55,7 @@ trainer:
 optimizer:
   _target_: torch.optim.Adam
   lr: 0.0001               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
-  weight_decay: 1e-4      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
+  weight_decay: 1e-6      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
 
 # =============================================================================
 # SCHEDULER CONFIGURATION
@@ -84,8 +86,11 @@ metric:
 # =============================================================================
 # TRAINING PARAMETERS
 # =============================================================================
-batch_size: 64            # Range: 8-128, AST: 16-32, EnvNet-v2: 32-64
-num_workers: 8            # Range: 0-16, depends on CPU cores
+# NOTE: These are the SINGLE SOURCE OF TRUTH for batch_size and num_workers
+# They are passed directly to the datamodule constructor by the training script
+# DO NOT duplicate these values in dataset config files
+batch_size: 128            # Range: 8-128, AST: 96-128 (large), EnvNet-v2: 32-64
+num_workers: 8            # Range: 0-16, 8 is optimal
 
 # =============================================================================
 # CHECKPOINTING CONFIGURATION
@@ -94,7 +99,7 @@ checkpoint:
   monitor: val/acc        # Options: val/acc, val/loss, train/loss
   mode: max               # max for accuracy, min for loss
   dirpath: checkpoints
-  save_top_k: 3           # Range: 1-10, number of best checkpoints to keep
+  save_top_k: 1          # Range: 1-10, number of best checkpoints to keep
   filename: "epoch-{epoch:02d}-val_acc-{val/acc:.3f}"
 
 # =============================================================================

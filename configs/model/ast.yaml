@@ -11,7 +11,6 @@ _target_: src.models.ast.ASTModel
 num_classes: ${dataset.num_classes}
 
 # AST model constructor parameters
-sample_rate: 44100                    # Standard audio sample rate
 patch_size: 16                        # Patch size for transformer
 patch_stride: 10                      # Stride for patch extraction
 overlap: 6                            # Overlap between patches
@@ -28,6 +27,7 @@ dataset_overrides:
   
   # AST benefits from Mixup augmentation (recommended for transformers)
   enable_mixup: true # true or false
+  mixup_alpha: 0.5   # Range: 0.1-2.0, typical: 0.5-1.0 (Beta distribution parameter)
   enable_bc_mixing: false            # do not change this
   
   # SpecAugment parameters (AST paper defaults)
@@ -37,7 +37,6 @@ dataset_overrides:
   
   # Spectrogram preprocessing settings
   preprocessing_config:
-    sample_rate: 44100                # Standard audio sample rate
     n_mels: 128                       # Range: 64-256, AST paper default: 128
     normalize: true                   # Boolean: normalize spectrograms for AST
     target_mean: 0.0                  # Range: -1.0 to 1.0, AST paper: 0.0

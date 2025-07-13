@@ -24,7 +24,7 @@ dataset_overrides:
   
   # EnvNet-v2 benefits from BC mixing (recommended for waveform models) 
   enable_mixup: false                # Not used with waveform models (do not change this)
-  enable_bc_mixing: false             # true or false, Recommended for EnvNet-v2
+  enable_bc_mixing: true             # true or false, Recommended for EnvNet-v2
   
   # No SpecAugment for waveform models
   augment:
@@ -33,8 +33,6 @@ dataset_overrides:
   
   # Waveform preprocessing settings
   preprocessing_config:
-    sample_rate: 44100                 # Standard audio sample rate (do not change this)
-    
     # Waveform-specific settings
     window_length: 5.0                 # Range: 1.0-10.0 seconds, EnvNet-v2 default: 5.0
     padding_ratio: 0.5                 # Range: 0.0-1.0, affects random cropping

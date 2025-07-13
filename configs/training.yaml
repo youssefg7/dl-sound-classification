@@ -22,7 +22,7 @@
 defaults:
   - base_training
   - dataset: esc50
-  - model: envnet_v2  # ast or envnet_v2
+  - model: ast  # ast or envnet_v2
   - _self_
 
 hydra:
@@ -31,11 +31,6 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: envnet_v2_training
+  experiment_name: ast_training
   
-checkpoint:
-  monitor: val/acc
-  mode: max
-  dirpath: checkpoints
-  save_top_k: 3
-  filename: "model-{epoch:02d}-{val/acc:.3f}" 
+# NOTE: Checkpoint settings are configured in configs/base_training.yaml 

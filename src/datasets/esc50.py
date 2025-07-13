@@ -238,9 +238,11 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
 
     def _process_ast(self, wave: torch.Tensor, label: int, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Process sample for AST."""
-        # Apply AST preprocessing (spectrogram conversion)
+        # Apply AST preprocessing (spectrogram conversion with automatic caching)
         if self.preprocessor and not (self.enable_mixup and self._cached_data):
-            spec = self.preprocessor.preprocess(wave, self.sample_rate)
+            # Use automatic caching for significant speedup
+            file_path = self.files[idx]
+            spec = self.preprocessor.preprocess_with_cache(wave, self.sample_rate, file_path)
         elif self.enable_mixup and self._cached_data:
             # Use cached spectrogram for mixup
             spec, _ = self._cached_data[idx]
@@ -279,7 +281,7 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
         self.training = training
     
     def _load_spectrograms_for_mixup(self, file_paths: List[Path], show_progress: bool = True) -> List[Tuple[torch.Tensor, int]]:
-        """Load spectrograms for Mixup augmentation with AST preprocessing."""
+        """Load spectrograms for Mixup augmentation with AST preprocessing and automatic caching."""
         data = []
         desc = "Loading spectrograms for Mixup"
         
@@ -297,9 +299,10 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
                 
             waveform, label = audio_data
             
-            # Convert to spectrogram using AST parameters
+            # Convert to spectrogram using AST parameters with automatic caching
             if self.preprocessor:
-                spec = self.preprocessor.preprocess(waveform, self.sample_rate)
+                # Use automatic caching for significant speedup
+                spec = self.preprocessor.preprocess_with_cache(waveform, self.sample_rate, path)
             else:
                 # Fallback to basic log-mel spectrogram with AST parameters
                 spec = create_ast_fallback_spectrogram(waveform, self.sample_rate, self.n_mels)
