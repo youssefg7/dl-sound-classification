@@ -4,19 +4,30 @@
 # Shared settings between training and optimization configurations.
 # Contains proven defaults and parameter ranges for audio classification.
 #
-# MODEL-SPECIFIC RECOMMENDATIONS:
-# ================================
+# MODEL-SPECIFIC RECOMMENDATIONS (based on testing):
+# ====================================================
 # AST (Audio Spectrogram Transformer):
 #   - lr: 0.0005 (lower for transformers)
 #   - batch_size: 16-32
 #   - max_epochs: 100-200
 #   - weight_decay: 1e-6
+#   - precision: 16-mixed (transformers handle mixed precision well)
 #
 # EnvNet-v2:
-#   - lr: 0.001-0.01
+#   - lr: 0.0001 (IMPORTANT: reduced from 0.001 to prevent gradient explosion)
 #   - batch_size: 32-64  
 #   - max_epochs: 200-300
 #   - weight_decay: 1e-4
+#   - precision: 32 (IMPORTANT: large model needs 32-bit for stability, 16-bit causes NaN)
+#   - gradient_clip_val: 1.0 (recommended to prevent gradient explosion)
+#
+# USAGE EXAMPLES:
+# ===============
+# EnvNet-v2 with recommended stable settings:
+#   python scripts/train.py model=envnet_v2 trainer.precision=32 optimizer.lr=0.0001
+#
+# AST with recommended settings:
+#   python scripts/train.py model=ast trainer.precision=16-mixed optimizer.lr=0.0005
 # =============================================================================
 
 defaults:
@@ -32,16 +43,16 @@ seed: 42                  # Range: any integer, for reproducibility
 trainer:
   max_epochs: 1000        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
   accelerator: auto       # Options: auto, gpu, cpu, tpu
-  precision: 16-mixed     # Options: 32, 16-mixed, bf16-mixed (faster training)
+  precision: 32     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
   devices: 1              # Range: 1-8, number of GPUs/devices
-  log_every_n_steps: 50   # Range: 10-100, logging frequency
+  log_every_n_steps: 1   # Range: 10-100, logging frequency | Recommended: 10 for less verbose
 
 # =============================================================================
 # OPTIMIZER CONFIGURATION  
 # =============================================================================
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.001               # Range: 1e-5 to 1e-2, AST: 0.0005, EnvNet-v2: 0.001-0.01
+  lr: 0.0001               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
   weight_decay: 1e-4      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
 
 # =============================================================================
@@ -49,7 +60,7 @@ optimizer:
 # =============================================================================
 scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  T_max: 100              # Should match max_epochs for full cycle
+  T_max: ${trainer.max_epochs}              # Should match max_epochs for full cycle
 
 # =============================================================================
 # LOSS FUNCTION CONFIGURATION
@@ -73,7 +84,7 @@ metric:
 # =============================================================================
 # TRAINING PARAMETERS
 # =============================================================================
-batch_size: 32            # Range: 8-128, AST: 16-32, EnvNet-v2: 32-64
+batch_size: 64            # Range: 8-128, AST: 16-32, EnvNet-v2: 32-64
 num_workers: 8            # Range: 0-16, depends on CPU cores
 
 # =============================================================================
@@ -92,5 +103,25 @@ checkpoint:
 early_stop:
   monitor: val/acc        # Same as checkpoint monitor
   mode: max               # Same as checkpoint mode  
-  patience: 15            # Range: 5-50, AST: 15, EnvNet-v2: 20
-  min_delta: 0.001        # Range: 0.0001-0.01, minimum improvement threshold 
+  patience: 50            # Range: 5-50, AST: 15, EnvNet-v2: 20
+  min_delta: 0.001        # Range: 0.0001-0.01, minimum improvement threshold
+
+# =============================================================================
+# TROUBLESHOOTING NOTES
+# =============================================================================
+# Common Issues & Solutions:
+# 
+# 1. NaN Losses (EnvNet-v2):
+#    - Cause: Mixed precision (16-bit) causes numerical instability  
+#    - Solution: Use trainer.precision=32
+#
+# 2. High Loss/Poor Learning (EnvNet-v2):
+#    - Cause: Learning rate too high (0.001 causes gradient explosion)
+#    - Solution: Use optimizer.lr=0.0001
+#
+# 3. Gradient Explosion:
+#    - Solution: Add +trainer.gradient_clip_val=1.0
+#
+# 4. Turn off all augmentation:
+#    - EnvNet-v2: dataset.enable_bc_mixing=false model.dataset_overrides.preprocessing_config.augment.time_stretch=null model.dataset_overrides.preprocessing_config.augment.gain_shift=null
+#    - AST: dataset.enable_mixup=false model.dataset_overrides.augment.time_mask=false model.dataset_overrides.augment.freq_mask=false 

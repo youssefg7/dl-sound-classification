@@ -23,17 +23,17 @@ dataset_overrides:
   is_spectrogram: false
   
   # EnvNet-v2 benefits from BC mixing (recommended for waveform models) 
-  enable_mixup: false                # Not used with waveform models
-  enable_bc_mixing: true             # Recommended for EnvNet-v2
+  enable_mixup: false                # Not used with waveform models (do not change this)
+  enable_bc_mixing: false             # true or false, Recommended for EnvNet-v2
   
   # No SpecAugment for waveform models
   augment:
-    time_mask: false                   # Disabled for waveform models
-    freq_mask: false                   # Disabled for waveform models
+    time_mask: false                   # Disabled for waveform models (do not change this)
+    freq_mask: false                   # Disabled for waveform models (do not change this)
   
   # Waveform preprocessing settings
   preprocessing_config:
-    sample_rate: 44100                 # Standard audio sample rate
+    sample_rate: 44100                 # Standard audio sample rate (do not change this)
     
     # Waveform-specific settings
     window_length: 5.0                 # Range: 1.0-10.0 seconds, EnvNet-v2 default: 5.0
@@ -41,6 +41,6 @@ dataset_overrides:
     
     # Waveform augmentation (EnvNet-v2 specific)
     augment:
-      time_stretch: [0.8, 1.25]       # Range: [0.5-0.9, 1.1-2.0], affects tempo
-      gain_shift: [-6, 6]              # Range: [-12, 12] dB, affects volume
+      time_stretch: null       # Range: [0.5-0.9, 1.1-2.0], affects tempo (null to disable)
+      gain_shift: null              # Range: [-12, 12] dB, affects volume (null to disable)
 

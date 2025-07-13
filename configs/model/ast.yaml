@@ -23,12 +23,12 @@ pretrained_model: deit_base_patch16_384  # Pretrained ViT model
 # These parameters override dataset settings for AST models
 # They are used by the training script, not passed to the model constructor
 dataset_overrides:
-  preprocessing_mode: ast
-  is_spectrogram: true
+  preprocessing_mode: ast # do not change this
+  is_spectrogram: true # do not change this
   
   # AST benefits from Mixup augmentation (recommended for transformers)
-  enable_mixup: true
-  enable_bc_mixing: false            # Not compatible with spectrogram mode
+  enable_mixup: true # true or false
+  enable_bc_mixing: false            # do not change this
   
   # SpecAugment parameters (AST paper defaults)
   augment:

@@ -22,7 +22,7 @@
 defaults:
   - base_training
   - dataset: esc50
-  - model: ast  # Default model (can be overridden)
+  - model: envnet_v2  # ast or envnet_v2
   - _self_
 
 hydra:
@@ -31,7 +31,7 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: generic_training
+  experiment_name: envnet_v2_training
   
 checkpoint:
   monitor: val/acc
