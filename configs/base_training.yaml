@@ -108,7 +108,7 @@ checkpoint:
 early_stop:
   monitor: val/acc        # Same as checkpoint monitor
   mode: max               # Same as checkpoint mode  
-  patience: 50            # Range: 5-50, AST: 15, EnvNet-v2: 20
+  patience: 15            # Range: 5-50, AST: 15, EnvNet-v2: 40
   min_delta: 0.001        # Range: 0.0001-0.01, minimum improvement threshold
 
 # =============================================================================
