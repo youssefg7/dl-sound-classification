@@ -572,7 +572,7 @@ class BCMixingDataset:
         Returns:
             Tuple of (mixed_waveform, soft_labels)
         """
-        if not self.enable_bc_mixing or random.random() > 0.5:  # 50% chance of mixing
+        if not self.enable_bc_mixing:
             # Return one-hot labels for non-mixed samples
             soft_labels = create_one_hot_labels(label, self.num_classes)
             return waveform, soft_labels
