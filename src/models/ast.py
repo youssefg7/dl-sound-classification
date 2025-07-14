@@ -10,21 +10,23 @@ class ASTModel(nn.Module):
         super().__init__()
 
         self.f_dim = 128
-        self.emb_dim = 768
         self.num_classes = num_classes
 
         # Estimate time dimension for typical 10-second clips (our preprocessing uses hop_length=160)
         self.t_dim = int((sample_rate * 10) / 160) + 1
 
+        # Load pretrained ViT
+        vit = timm.create_model(pretrained_model, pretrained=True)
+        self.emb_dim = int(vit.embed_dim)  # Dynamically set embedding dim
+
         # Positional embedding interpolation grid
-        self.old_grid = (24, 24)
+        num_patches = vit.pos_embed.shape[1] - 1  # exclude cls token
+        self.old_grid = int(num_patches ** 0.5), int(num_patches ** 0.5)
         self.new_grid = (
             (self.f_dim - patch_size) // (patch_size - overlap) + 1,
             (self.t_dim - patch_size) // (patch_size - overlap) + 1
         )
 
-        # Load pretrained ViT
-        vit = timm.create_model(pretrained_model, pretrained=True)
         self.patch_embed = nn.Conv2d(1, self.emb_dim, kernel_size=patch_size, stride=patch_stride, bias=True)
         with torch.no_grad():
             self.patch_embed.weight.copy_(vit.patch_embed.proj.weight.mean(dim=1, keepdim=True))  # type: ignore
