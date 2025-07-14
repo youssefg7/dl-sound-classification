@@ -312,4 +312,81 @@ class HyperparameterSpace:
         
         if not isinstance(merged_config, DictConfig):
             raise ValueError(f"Expected DictConfig, got {type(merged_config)}")
-        return cls(merged_config) 
+        return cls(merged_config)
+
+    @classmethod
+    def from_model_config(cls, model_config: DictConfig, hp_spaces_dir: str = "configs/optimization/hyperparameter_spaces") -> "HyperparameterSpace":
+        """
+        Create HyperparameterSpace by automatically loading relevant configs based on model.
+        
+        This method implements a modular hierarchy:
+        - Generic spaces: training.yaml, loss.yaml (always loaded)
+        - Model-specific: models/{model_name}.yaml (loaded based on model._target_)
+        
+        Args:
+            model_config: Full model configuration containing model._target_
+            hp_spaces_dir: Directory containing hyperparameter space configs
+            
+        Returns:
+            HyperparameterSpace instance with only relevant parameters
+            
+        Raises:
+            ValueError: If no relevant hyperparameter spaces found
+        """
+        from pathlib import Path
+        
+        hp_space_dir = Path(hp_spaces_dir)
+        configs = []
+        
+        # 1. Extract model name from model._target_ field
+        model_name = None
+        if hasattr(model_config, 'model') and hasattr(model_config.model, '_target_'):
+            model_target = model_config.model._target_
+            # Extract model name from target path (e.g., "src.models.envnet_v2.EnvNetV2" -> "envnet_v2")
+            if '.' in model_target:
+                # Split by dots and find the model name (usually the second-to-last part)
+                parts = model_target.split('.')
+                # Look for common patterns: src.models.{model_name}.{ClassName}
+                if len(parts) >= 3 and parts[0] == 'src' and parts[1] == 'models':
+                    model_name = parts[2]
+                else:
+                    # Fallback: use the last part before the class name
+                    model_name = parts[-2] if len(parts) >= 2 else parts[-1]
+            else:
+                model_name = model_target
+        
+        print(f"🔍 Model detected: {model_name}")
+        
+        # 2. Load generic hyperparameter spaces (always loaded)
+        generic_files = ['training.yaml', 'loss.yaml']
+        for file_name in generic_files:
+            file_path = hp_space_dir / file_name
+            if file_path.exists():
+                print(f"   ✓ Loading generic: {file_name}")
+                config = OmegaConf.load(file_path)
+                configs.append(config)
+            else:
+                print(f"   ⚠ Generic file not found: {file_name}")
+        
+        # 3. Load model-specific hyperparameter space
+        if model_name:
+            model_file = hp_space_dir / "models" / f"{model_name}.yaml"
+            if model_file.exists():
+                print(f"   ✓ Loading model-specific: models/{model_name}.yaml")
+                config = OmegaConf.load(model_file)
+                configs.append(config)
+            else:
+                print(f"   ⚠ Model-specific file not found: models/{model_name}.yaml")
+                available_models = [f.stem for f in (hp_space_dir / 'models').glob('*.yaml')]
+                if available_models:
+                    print(f"     Available models: {available_models}")
+                else:
+                    print(f"     No model files found in {hp_space_dir / 'models'}")
+        else:
+            print("   ⚠ Could not determine model name - only generic spaces loaded")
+        
+        if not configs:
+            raise ValueError(f"No relevant hyperparameter space configs found in {hp_space_dir}")
+        
+        print(f"   📊 Total configs loaded: {len(configs)}")
+        return cls.from_multiple_configs(configs) 

@@ -34,7 +34,7 @@ optuna:
 
   # Optimization settings
   n_trials: 100
-  timeout: 60*60*4  # in seconds (null for no timeout)
+  timeout: 14400  # 4 hours in seconds (60*60*4 = 14400) (null for no timeout)
 
   # TPE Sampler configuration
   sampler:

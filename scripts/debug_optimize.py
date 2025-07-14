@@ -89,20 +89,17 @@ def debug_optimize(cfg: DictConfig) -> None:
     print(f"   Direction: {optuna_cfg.direction}")
     print(f"   Storage: {optuna_cfg.storage_path}")
     
-    # Load hyperparameter space configurations
-    hp_space_dir = Path("configs/optimization/hyperparameter_spaces")
-    hp_space_configs = []
-    
-    for hp_file in hp_space_dir.glob("*.yaml"):
-        print(f"   Loading HP space: {hp_file.name}")
-        hp_config = OmegaConf.load(hp_file)
-        hp_space_configs.append(hp_config)
+    # Load hyperparameter space configurations (modular)
+    hyperparameter_space = HyperparameterSpace.from_model_config(cfg)
     
     # Create DEBUG OptunaTrainer with progress bars
+    from src.optimization.study_manager import StudyManager
+    study_manager = StudyManager.from_config(optuna_cfg)
+    
     trainer = DebugOptunaTrainer(
         config=cfg,
-        study_manager=BaseOptunaTrainer.from_config(cfg, optuna_cfg, hp_space_configs).study_manager,
-        hyperparameter_space=HyperparameterSpace.from_multiple_configs(hp_space_configs),
+        study_manager=study_manager,
+        hyperparameter_space=hyperparameter_space,
         n_trials=optuna_cfg.get("n_trials", 100),
         timeout=optuna_cfg.get("timeout", None),
         mlflow_experiment_name=optuna_cfg.get("mlflow_experiment_name", "debug_optuna_optimization"),

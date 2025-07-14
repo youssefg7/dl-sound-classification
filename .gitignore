@@ -203,3 +203,5 @@ data/processed/
 # MLflow logs
 mlruns/
 outputs/
+
+optuna_studies.db

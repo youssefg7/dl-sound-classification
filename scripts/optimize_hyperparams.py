@@ -75,23 +75,20 @@ def optimize_hyperparams(cfg: DictConfig) -> None:
     print(f"   Direction: {optuna_cfg.direction}")
     print(f"   Storage: {optuna_cfg.storage_path}")
     
-    # Load hyperparameter space configurations
-    hp_space_dir = Path("configs/optimization/hyperparameter_spaces")
-    hp_space_configs = []
+    # Load hyperparameter space configurations (modular)
+    hyperparameter_space = HyperparameterSpace.from_model_config(cfg)
     
-    for hp_file in hp_space_dir.glob("*.yaml"):
-        print(f"   Loading HP space: {hp_file.name}")
-        hp_config = OmegaConf.load(hp_file)
-        hp_space_configs.append(hp_config)
+    # Create OptunaTrainer with modular hyperparameter space
+    from src.optimization.study_manager import StudyManager
+    study_manager = StudyManager.from_config(optuna_cfg)
     
-    if not hp_space_configs:
-        raise ValueError(f"No hyperparameter space configs found in {hp_space_dir}")
-    
-    # Create OptunaTrainer
-    trainer = OptunaTrainer.from_config(
+    trainer = OptunaTrainer(
         config=cfg,
-        optuna_config=optuna_cfg,
-        hyperparameter_spaces=hp_space_configs,
+        study_manager=study_manager,
+        hyperparameter_space=hyperparameter_space,
+        n_trials=optuna_cfg.get("n_trials", 100),
+        timeout=optuna_cfg.get("timeout", None),
+        mlflow_experiment_name=optuna_cfg.get("mlflow_experiment_name", "optuna_optimization"),
     )
     
     # Run optimization

@@ -1,0 +1,47 @@
+# =============================================================================
+# EnvNet-v2 Model Hyperparameter Space (Anti-Overfitting Focus)
+# =============================================================================
+# Defines search space for EnvNet-v2 model constructor parameters.
+# Ranges optimized for overfitting prevention after observing extreme overfitting
+# (0.92 val acc vs 0.43 test acc). Focus on high dropout rates.
+# =============================================================================
+
+model:
+  # Dropout rate - SIGNIFICANTLY INCREASED for overfitting prevention
+  dropout:
+    type: float
+    low: 0.6       # Much higher minimum (was 0.1)
+    high: 0.9      # Higher maximum (was 0.7)
+    log: false
+
+  # Dataset overrides for EnvNet-v2 augmentation - ENABLE for regularization
+  dataset_overrides:
+    preprocessing_config:
+      # Window length variation for data diversity
+      window_length:
+        type: float
+        low: 3.0     # Shorter clips for more variety
+        high: 8.0    # Longer clips for more context
+        log: false
+      
+      # Padding ratio for random cropping variation
+      padding_ratio:
+        type: float
+        low: 0.2     # Less padding = more aggressive cropping
+        high: 0.8    # More padding = gentler cropping  
+        log: false
+      
+      augment:
+        # Time stretch for tempo variation (strong regularization)
+        time_stretch:
+          type: float
+          low: 0.7   # Slow down audio (0.5-0.9 range)
+          high: 1.4  # Speed up audio (1.1-2.0 range) 
+          log: false
+        
+        # Gain shift for volume variation (strong regularization)
+        gain_shift:
+          type: float
+          low: -8.0  # Reduce volume by up to 8dB
+          high: 8.0  # Increase volume by up to 8dB
+          log: false 

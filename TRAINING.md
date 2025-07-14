@@ -232,6 +232,7 @@ best_config_path: "best_config.yaml"
 ```bash
 # Run with default settings
 python scripts/optimize_hyperparams.py
+python scripts/debug_optimize.py # shows progress bars and detailed logging
 
 # Quick test (5 trials)
 python scripts/optimize_hyperparams.py optuna.n_trials=5

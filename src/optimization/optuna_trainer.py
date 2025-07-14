@@ -310,8 +310,8 @@ class OptunaTrainer:
                     # Check if it's a metric object with compute method
                     if hasattr(val_acc_obj, 'compute') and callable(getattr(val_acc_obj, 'compute')):
                         val_acc = val_acc_obj.compute()  # type: ignore
-                    print(f"✓ Computed val_acc directly: {val_acc}")
-                    return float(val_acc)
+                        print(f"✓ Computed val_acc directly: {val_acc}")
+                        return float(val_acc)
                     else:
                         print(f"⚠ val_acc object doesn't have compute method")
                 except Exception as e:
