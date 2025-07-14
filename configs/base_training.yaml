@@ -43,7 +43,7 @@ seed: 42                  # Range: any integer, for reproducibility
 # TRAINER CONFIGURATION
 # =============================================================================
 trainer:
-  max_epochs: 1000        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
+  max_epochs: 250        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
   accelerator: auto       # Options: auto, gpu, cpu, tpu
   precision: 32     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
   devices: 1              # Range: 1-8, number of GPUs/devices

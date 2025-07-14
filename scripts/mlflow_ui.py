@@ -1,6 +1,7 @@
 import subprocess
 import time
 import os
+import random
 from dotenv import load_dotenv
 from pyngrok import ngrok, conf
 
@@ -15,7 +16,7 @@ if not ngrok_token:
 conf.get_default().auth_token = ngrok_token
 
 # === CONFIG ===
-MLFLOW_PORT = 5000
+MLFLOW_PORT = str(random.randint(6000, 6999))
 USE_AUTH = False
 AUTH_CREDENTIALS = "mlflow:1234"
 # ==============

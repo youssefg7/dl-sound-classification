@@ -34,7 +34,7 @@ optuna:
 
   # Optimization settings
   n_trials: 100
-  timeout: null  # No timeout by default (set in seconds if needed)
+  timeout: 60*60*4  # in seconds (null for no timeout)
 
   # TPE Sampler configuration
   sampler:
@@ -45,7 +45,7 @@ optuna:
   # Hyperband Pruner configuration
   pruner:
     min_resource: 1           # Start with 1 epoch minimum
-    max_resource: 100         # Up to 100 epochs maximum  
+    max_resource: 200         # Up to 200 epochs maximum  
     reduction_factor: 2       # Keep top 50%, prune bottom 50%
 
   # Monitoring configuration
