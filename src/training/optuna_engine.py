@@ -54,6 +54,94 @@ class OptunaLitClassifier(LitClassifier):
         
         # Store trial number for logging
         self.trial_number = trial.number if trial else None
+        
+        # Log comprehensive hyperparameters if trial is available
+        if self.trial is not None:
+            # Recreate the full configuration for logging
+            full_config = {
+                "model": model_cfg,
+                "optimizer": optim_cfg,
+                "scheduler": sched_cfg,
+                "loss": loss_cfg,
+                "metric": metric_cfg,
+            }
+            self._log_comprehensive_config(full_config)
+    
+    def _log_comprehensive_config(self, config: dict) -> None:
+        """
+        Log comprehensive configuration (when logger becomes available).
+        Store config for later logging since logger might not be available during init.
+        
+        Args:
+            config: Configuration dictionary to log
+        """
+        # Store config for logging when logger becomes available
+        self._stored_config = config
+    
+    def on_train_start(self) -> None:
+        """Called when training starts - logger is now available."""
+        super().on_train_start()
+        
+        # Log comprehensive config now that logger is available
+        if hasattr(self, '_stored_config') and self.logger and self.trial is not None:
+            self._log_config_to_mlflow(self._stored_config)
+    
+    def _log_config_to_mlflow(self, config: dict) -> None:
+        """
+        Log comprehensive configuration to MLflow.
+        
+        Args:
+            config: Configuration dictionary to log
+        """
+        from lightning.pytorch.loggers import MLFlowLogger
+        
+        if not isinstance(self.logger, MLFlowLogger):
+            return
+            
+        def flatten_config(config_dict, parent_key='', sep='_'):
+            """Flatten nested config dictionary for MLflow logging."""
+            items = []
+            for k, v in config_dict.items():
+                if v is None:
+                    continue  # Skip None values
+                new_key = f"{parent_key}{sep}{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_config(v, new_key, sep=sep).items())
+                else:
+                    # Convert to string for MLflow compatibility
+                    if isinstance(v, (list, tuple)):
+                        v = str(v)
+                    elif hasattr(v, '__name__'):  # For classes/functions
+                        v = str(v)
+                    items.append((f"cfg_{new_key}", v))  # Prefix to avoid conflicts
+            return dict(items)
+        
+        # Convert config to flat dictionary
+        flat_params = flatten_config(config)
+        
+        # Add trial-specific parameters
+        trial_params = {
+            f"trial_{self.trial_number}/trial_number": self.trial_number,
+        }
+        flat_params.update(trial_params)
+        
+        # Log all parameters to MLflow
+        logged_count = 0
+        for param_name, param_value in flat_params.items():
+            try:
+                # Convert to string and truncate if too long (MLflow has limits)
+                param_str = str(param_value)
+                if len(param_str) > 250:  # MLflow parameter value limit
+                    param_str = param_str[:247] + "..."
+                    
+                # Add trial prefix to distinguish from other trials
+                trial_param_name = f"trial_{self.trial_number}/{param_name}"
+                self.logger.experiment.log_param(self.logger.run_id, trial_param_name, param_str)
+                logged_count += 1
+            except Exception as e:
+                print(f"⚠ Failed to log parameter {param_name}: {e}")
+        
+        print(f"✓ OptunaLitClassifier logged {logged_count} configuration parameters to MLflow for trial {self.trial_number}")
     
     def on_train_epoch_end(self) -> None:
         """Enhanced epoch end with trial-specific logging."""

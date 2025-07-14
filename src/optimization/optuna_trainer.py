@@ -116,6 +116,9 @@ class OptunaTrainer:
         Returns:
             Objective value to optimize
         """
+        # Store current trial for access in other methods
+        self._current_trial = trial
+        
         # Get suggested hyperparameters
         suggested_params = self.hyperparameter_space.suggest_parameters(trial)
         
@@ -138,6 +141,9 @@ class OptunaTrainer:
         
         # Create trainer with pruning callback
         trainer = self._create_trainer(trial_config, pruning_callback, trial)
+        
+        # Log comprehensive hyperparameters (similar to normal training)
+        self._log_comprehensive_hyperparameters(trainer, trial_config, trial)
         
         # Train the model
         try:
@@ -181,7 +187,7 @@ class OptunaTrainer:
             Tuple of (model, datamodule)
         """
         # Import here to avoid circular imports
-        from src.training.engine import build_from_cfg
+        from src.training.optuna_engine import build_optuna_model
         from hydra.utils import instantiate
         
         # Build datamodule with model-specific overrides
@@ -219,11 +225,14 @@ class OptunaTrainer:
         # Create datamodule with merged config
         datamodule = instantiate(datamodule_cfg)
         
-        # Build model with clean config (without dataset_overrides)
+        # Build Optuna-aware model instead of regular model
         from omegaconf import OmegaConf
         clean_model_cfg = OmegaConf.create(model_cfg)
         clean_config = OmegaConf.create(dict(config, model=clean_model_cfg))
-        model = build_from_cfg(clean_config)
+        
+        # Get trial object from current context if available
+        trial = getattr(self, '_current_trial', None)
+        model = build_optuna_model(clean_config, trial=trial)
         
         return model, datamodule
     
@@ -281,6 +290,74 @@ class OptunaTrainer:
         warnings.filterwarnings("ignore", message=".*can only test a child process.*")
         
         return pl.Trainer(**trainer_cfg)
+    
+    def _log_comprehensive_hyperparameters(
+        self, 
+        trainer: pl.Trainer, 
+        config: DictConfig, 
+        trial: optuna.Trial
+    ) -> None:
+        """
+        Log comprehensive hyperparameters to MLflow (similar to normal training).
+        
+        Args:
+            trainer: PyTorch Lightning trainer with MLflow logger
+            config: Configuration object with all parameters
+            trial: Optuna trial object
+        """
+        logger = trainer.logger
+        if not logger or not isinstance(logger, MLFlowLogger):
+            print("⚠ MLflow logger not available for comprehensive parameter logging")
+            return
+            
+        def flatten_config(config_dict, parent_key='', sep='_'):
+            """Flatten nested config dictionary for MLflow logging."""
+            items = []
+            for k, v in config_dict.items():
+                new_key = f"{parent_key}{sep}{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_config(v, new_key, sep=sep).items())
+                else:
+                    # Convert to string for MLflow compatibility
+                    if v is None:
+                        v = "None"
+                    elif isinstance(v, (list, tuple)):
+                        v = str(v)
+                    elif hasattr(v, '__name__'):  # For classes/functions
+                        v = str(v)
+                    items.append((f"cfg_{new_key}", v))  # Prefix to avoid conflicts
+            return dict(items)
+        
+        # Convert OmegaConf to regular dict and flatten
+        from omegaconf import OmegaConf
+        # Convert to container to resolve interpolations and get regular Python dict
+        config_dict = OmegaConf.to_container(config, resolve=True)
+        flat_params = flatten_config(config_dict)
+        
+        # Add trial-specific parameters
+        trial_params = {
+            f"trial_{trial.number}/trial_number": trial.number,
+            f"trial_{trial.number}/optuna_study": self.study_manager.study_name,
+        }
+        flat_params.update(trial_params)
+        
+        # Log all parameters to MLflow
+        logged_count = 0
+        for param_name, param_value in flat_params.items():
+            try:
+                # Convert to string and truncate if too long (MLflow has limits)
+                param_str = str(param_value)
+                if len(param_str) > 250:  # MLflow parameter value limit
+                    param_str = param_str[:247] + "..."
+                    
+                # Add trial prefix to distinguish from other trials
+                trial_param_name = f"trial_{trial.number}/{param_name}"
+                logger.experiment.log_param(logger.run_id, trial_param_name, param_str)
+                logged_count += 1
+            except Exception as e:
+                print(f"⚠ Failed to log parameter {param_name}: {e}")
+        
+        print(f"✓ Logged {logged_count} comprehensive configuration parameters to MLflow for trial {trial.number}")
     
     def _get_final_metric_value(
         self, 
