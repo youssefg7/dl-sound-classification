@@ -1,16 +1,17 @@
 # =============================================================================
-# Loss Function Hyperparameter Space
+# Loss Function Hyperparameter Space (Anti-Overfitting Focus)
 # =============================================================================
 # Defines search space for loss function parameters.
-# Works with both AST and EnvNet-v2 models.
+# Ranges optimized for overfitting prevention after observing extreme overfitting
+# in EnvNet-v2 (0.92 val acc vs 0.43 test acc).
 # =============================================================================
 
 # Loss function hyperparameters
 loss:
-  # Label smoothing for cross-entropy loss
-  # Often helpful for transformers (AST), less critical for CNNs (EnvNet-v2)
+  # Label smoothing - INCREASED focus for regularization
+  # Critical for preventing overconfident predictions and overfitting
   label_smoothing:
     type: float
-    low: 0.0
-    high: 0.3
+    low: 0.05      # Higher minimum to ensure some smoothing (was 0.0)
+    high: 0.4      # Higher maximum for stronger regularization (was 0.3)
     log: false 

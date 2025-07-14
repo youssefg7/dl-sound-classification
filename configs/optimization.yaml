@@ -54,8 +54,11 @@ optuna:
   min_epochs: 20              # Minimum epochs before pruning
 
   # MLflow integration
-  mlflow_experiment_name: "optuna_hyperparameter_optimization"
+  mlflow_experiment_name: "optuna_hyperparameter_optimization_envnet_v2"
 
   # Output configuration
   output_dir: "outputs/optimization"
   best_config_path: "best_config.yaml" 
+
+trainer:
+  max_epochs: 250

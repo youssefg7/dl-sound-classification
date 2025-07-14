@@ -1,63 +1,57 @@
 # =============================================================================
-# Training Hyperparameter Space
+# Training Hyperparameter Space (Anti-Overfitting Focus)
 # =============================================================================
 # Defines search space for training-related hyperparameters.
-# Model-specific preprocessing parameters are handled automatically by model configs.
+# Ranges optimized for EnvNet-v2 overfitting prevention after observing
+# extreme overfitting (0.92 val acc vs 0.43 test acc).
 # =============================================================================
 
-# Optimizer hyperparameters
+# Optimizer hyperparameters  
 optimizer:
-  # Learning rate with log scale
+  # Learning rate - LOWERED for overfitting prevention
   lr:
     type: float
-    low: 1e-4
-    high: 1e-2
+    low: 1e-5      # Much lower minimum (was 1e-4)
+    high: 1e-4     # Much lower maximum (was 1e-2)  
     log: true
   
-  # Weight decay for regularization
+  # Weight decay - INCREASED for stronger regularization
   weight_decay:
     type: float
-    low: 1e-6
-    high: 1e-2
+    low: 1e-3      # Higher minimum for stronger regularization (was 1e-6)
+    high: 1e-2     # Keep high maximum 
     log: true
 
 # Scheduler hyperparameters
 scheduler:
-  # T_max for CosineAnnealingLR (will be set to max_epochs)
+  # T_max for CosineAnnealingLR - SHORTENED for faster convergence
   T_max:
     type: int
-    low: 50
-    high: 200
+    low: 150        # Shorter minimum (was 50)
+    high: 250      # Shorter maximum (was 200)
     log: false
 
-# Training configuration
-trainer:
-  # Maximum number of epochs
-  max_epochs:
-    type: int
-    low: 50
-    high: 200
-    log: false
-
-# Batch size (categorical for common powers of 2)
+# Batch size - FOCUS on larger sizes to reduce overfitting
 batch_size:
   type: categorical
-  choices: [16, 32, 64, 128]
+  choices: [64, 128, 256]  # Removed smaller sizes, added 256
 
-# Dataset-level augmentation (model-specific defaults handled automatically)
+# Dataset-level augmentation
 dataset:
-  # Mixup alpha parameter (used when enable_mixup=true, model-specific defaults applied)
-  mixup_alpha:
-    type: float
-    low: 0.1
-    high: 2.0
-    log: false
-  
-  # Override model-specific augmentation defaults (optional)
-  enable_bc_mixing:
-    type: categorical
-    choices: [true, false]
-  
+  # Mixup - keep disabled for waveform models
   enable_mixup:
     type: categorical
-    choices: [true, false] 
+    choices: [false]  # EnvNet-v2 uses waveforms, not spectrograms
+     
+  # Mixup alpha parameter (for models that support it)
+  mixup_alpha:
+    type: float
+    low: 0.2       # Higher minimum for stronger augmentation (was 0.1)
+    high: 1.5      # Slightly lower max (was 2.0)
+    log: false
+  
+  # BC mixing - FORCE enabled for EnvNet-v2 regularization  
+  enable_bc_mixing:
+    type: categorical
+    choices: [true]  # Only true - BC mixing is critical for EnvNet-v2
+  

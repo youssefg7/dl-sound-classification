@@ -20,15 +20,15 @@ model:
       # Window length variation for data diversity
       window_length:
         type: float
-        low: 3.0     # Shorter clips for more variety
-        high: 8.0    # Longer clips for more context
+        low: 5.0     # Fixed at 5.0 seconds to match EnvNet-v2 input size
+        high: 5.0    # Fixed at 5.0 seconds to match EnvNet-v2 input size
         log: false
       
       # Padding ratio for random cropping variation
       padding_ratio:
         type: float
-        low: 0.2     # Less padding = more aggressive cropping
-        high: 0.8    # More padding = gentler cropping  
+        low: 0.5     # Fixed at 0.5 to match EnvNet-v2 input size
+        high: 0.5    # Fixed at 0.5 to match EnvNet-v2 input size
         log: false
       
       augment:

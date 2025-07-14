@@ -29,4 +29,35 @@ model:
       "deit_small_patch16_224", 
       "deit_base_patch16_224",
       "deit_base_patch16_384"
-    ] 
+    ]
+  dataset_overrides:
+    augment:
+      time_mask:
+        type: int
+        low: 0
+        high: 300
+        log: false
+      freq_mask:
+        type: int
+        low: 0
+        high: 80
+        log: false
+    preprocessing_config:
+      n_mels:
+        type: int
+        low: 64
+        high: 256
+        log: false
+      normalize:
+        type: categorical
+        choices: [true, false]
+      target_mean:
+        type: float
+        low: -1.0
+        high: 1.0
+        log: false
+      target_std:
+        type: float
+        low: 0.1
+        high: 1.0
+        log: false
