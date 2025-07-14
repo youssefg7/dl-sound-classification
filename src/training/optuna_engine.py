@@ -8,11 +8,10 @@ enhanced logging.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
 import lightning.pytorch as pl
 import optuna
-import torch
 from omegaconf import DictConfig
 
 from .engine import LitClassifier

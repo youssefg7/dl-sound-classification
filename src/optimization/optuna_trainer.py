@@ -9,9 +9,8 @@ and pruning callbacks.
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Optional, Callable
 
 import lightning.pytorch as pl
 import optuna
@@ -151,10 +150,24 @@ class OptunaTrainer:
         # Get final metric value
         metric_name = trial_config.get("optuna", {}).get("monitor", "val/acc")
         final_value = self._get_final_metric_value(trainer, metric_name)
-        
         if final_value is None:
             raise optuna.TrialPruned("Could not retrieve final metric value")
-        
+
+        # --- Run test set evaluation and log to MLflow ---
+        test_results = trainer.test(model, datamodule=datamodule, verbose=False)
+        if test_results and isinstance(test_results, list):
+            test_metrics = test_results[0]
+            # Log all test metrics to MLflow with trial context
+            logger = trainer.logger
+            if logger is not None and hasattr(logger, "log_metrics"):
+                # Add optuna_trial to metric names for clarity
+                trial_prefix = f"trial_{trial.number}/"
+                metrics_to_log = {trial_prefix + k: v for k, v in test_metrics.items()}
+                logger.log_metrics(metrics_to_log, step=trial.number)
+            print(f"Test metrics for trial {trial.number}: {test_metrics}")
+        else:
+            print(f"Warning: No test results for trial {trial.number}")
+
         return final_value
     
     def _build_model_and_data(self, config: DictConfig) -> tuple[pl.LightningModule, pl.LightningDataModule]:
