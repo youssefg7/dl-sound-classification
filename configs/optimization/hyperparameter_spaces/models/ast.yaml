@@ -7,19 +7,22 @@
 
 model:
   # Patch size for transformer patches (affects model capacity and resolution)
+  # NOTE: Must be 16 to match pretrained ViT models (all have patch16 in name)
   patch_size:
     type: categorical
-    choices: [12, 16, 20, 24]
+    choices: [16]
   
   # Patch stride for patch extraction (affects overlap and computational cost)
+  # NOTE: Must be <= patch_size (16) and >= overlap
   patch_stride:
     type: categorical
     choices: [8, 10, 12, 14, 16]
   
   # Overlap between patches (affects information sharing)
+  # NOTE: Must be < patch_size (16) and <= patch_stride
   overlap:
     type: categorical
-    choices: [4, 6, 8, 10]
+    choices: [4, 6, 8]
   
   # Pretrained Vision Transformer model (different capacities)
   pretrained_model:

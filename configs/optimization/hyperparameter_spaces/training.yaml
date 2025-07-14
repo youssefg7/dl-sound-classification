@@ -41,8 +41,8 @@ dataset:
   # Mixup - keep disabled for waveform models
   enable_mixup:
     type: categorical
-    choices: [false]  # EnvNet-v2 uses waveforms, not spectrograms
-     
+    choices: [true]  # EnvNet-v2 uses waveforms, not spectrograms
+
   # Mixup alpha parameter (for models that support it)
   mixup_alpha:
     type: float
@@ -53,5 +53,5 @@ dataset:
   # BC mixing - FORCE enabled for EnvNet-v2 regularization  
   enable_bc_mixing:
     type: categorical
-    choices: [true]  # Only true - BC mixing is critical for EnvNet-v2
+    choices: [false]  # Only true - BC mixing is critical for EnvNet-v2
   

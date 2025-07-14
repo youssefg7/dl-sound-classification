@@ -14,7 +14,7 @@
 defaults:
   - base_training
   - dataset: esc50
-  - model: envnet_v2
+  - model: ast
   - _self_
 
 hydra:
@@ -23,12 +23,12 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: envnet_v2_esc50_optimization
+  experiment_name: ast_esc50_optimization
 
 # Optuna configuration
 optuna:
   # Study configuration
-  study_name: "envnet_v2_esc50_optimization"
+  study_name: "ast_esc50_optimization"
   direction: "maximize"  # maximize validation accuracy
   storage_path: "optuna_studies.db"  # SQLite database path
 
@@ -54,7 +54,7 @@ optuna:
   min_epochs: 20              # Minimum epochs before pruning
 
   # MLflow integration
-  mlflow_experiment_name: "optuna_hyperparameter_optimization_envnet_v2"
+  mlflow_experiment_name: "optuna_hyperparameter_optimization_ast"
 
   # Output configuration
   output_dir: "outputs/optimization"

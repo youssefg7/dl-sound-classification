@@ -45,7 +45,7 @@ seed: 42                  # Range: any integer, for reproducibility
 trainer:
   max_epochs: 250        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
   accelerator: auto       # Options: auto, gpu, cpu, tpu
-  precision: 32     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
+  precision: 16-mixed     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
   devices: 1              # Range: 1-8, number of GPUs/devices
   log_every_n_steps: 1   # Range: 10-100, logging frequency | Recommended: 10 for less verbose
 
@@ -54,7 +54,7 @@ trainer:
 # =============================================================================
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.0001               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
+  lr: 0.0005               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
   weight_decay: 1e-6      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
 
 # =============================================================================
