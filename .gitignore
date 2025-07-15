@@ -205,3 +205,4 @@ mlruns/
 outputs/
 
 optuna_studies.db
+test.py

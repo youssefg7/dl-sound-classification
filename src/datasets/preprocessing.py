@@ -26,6 +26,9 @@ from dataclasses import dataclass, field
 import torch
 import torchaudio
 import torch.nn.functional as F
+import torchvision.transforms as T
+from torch import Tensor
+from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -1101,6 +1104,8 @@ class PreprocessingCache:
             return EnvNetPreprocessor(config)
         elif mode == 'ast':
             return ASTPreprocessor(config)
+        elif mode == 'cnn_esc50':
+            return CNNESC50Preprocessor(config)
         else:
             raise ValueError(f"Unknown preprocessing mode: {mode}")
     
@@ -1404,3 +1409,52 @@ def cleanup_cache_by_age(base_cache_dir: Path, max_age_days: int = 30) -> Dict[s
                 summary['errors'].append(f"Failed to remove {file_path}: {e}")
     
     return summary 
+
+
+class CNNESC50Preprocessor(BasePreprocessor):
+    """Preprocessor for the CNN-ESC50 model from Inik et al. (2023)."""
+    def __init__(self, config: PreprocessingConfig):
+        super().__init__(config)
+        # parameters
+        self.sample_rate = config.config.get('sample_rate', 44100)
+        self.n_mels      = config.config.get('n_mels', 128)
+        # mel spectrogram
+        self.mel_transform = torchaudio.transforms.MelSpectrogram(
+            sample_rate=self.sample_rate,
+            n_fft=1024,
+            hop_length=512,
+            win_length=1024,
+            n_mels=self.n_mels,
+            power=2.0
+        )
+        self.to_db = torchaudio.transforms.AmplitudeToDB(top_db=80)
+        # image‐style augmentations (flips + small translation)
+        self.augment = T.Compose([
+            T.Resize((224, 224)),
+            T.RandomHorizontalFlip(),
+            T.RandomVerticalFlip(),
+            T.RandomAffine(degrees=0, translate=(0.1,0.1)),
+        ])
+        # to‐tensor + normalize
+        self.post = T.Compose([
+            T.ToTensor(),       # yields [C=1,H,W]
+            T.Normalize(mean=[0.0], std=[0.5])
+        ])
+
+    def get_cache_suffix(self) -> str:
+        return f"cnn_esc50_{self.config.get_hash()}"
+
+    def preprocess(self, waveform: Tensor, sample_rate: int) -> Tensor:
+        # resample
+        wav = resample_waveform(waveform, sample_rate, self.sample_rate)
+        # mel → db
+        m  = self.mel_transform(wav)      # [1, n_mels, T]
+        db = self.to_db(m)                # log-mel
+        # to PIL F-mode image for augment
+        img = Image.fromarray(db.squeeze(0).numpy().astype('float32'), mode='F')
+        # augment & normalize
+        img_tensor = self.augment(img)
+        tensor     = self.post(img_tensor)  # [1,224,224]
+        # replicate to 3 channels for CNN input
+        tensor = tensor.repeat(3, 1, 1)  # [3,224,224]
+        return tensor

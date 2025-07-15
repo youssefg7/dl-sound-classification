@@ -1,0 +1,24 @@
+# =============================================================================
+# EnvNet-v2 Model Configuration
+# =============================================================================
+# Model constructor parameters and dataset overrides for EnvNet-v2-specific preprocessing.
+#
+# Reference: Learning Environmental Sounds with End-to-End Convolutional Neural Network
+# EnvNet-v2 uses raw waveform inputs with temporal augmentation
+# =============================================================================
+
+_target_: src.models.cnn_esc50.CNN_ESC50
+num_classes: ${dataset.num_classes}
+
+
+# =============================================================================
+# ENVNET-V2-SPECIFIC DATASET OVERRIDES
+# =============================================================================
+# These parameters override dataset settings for EnvNet-v2 models
+# They are used by the training script, not passed to the model constructor
+dataset_overrides:
+  is_spectrogram: true
+  preprocessing_mode: cnn_esc50
+  preprocessing_config:
+    sample_rate: 44100
+    n_mels: 128

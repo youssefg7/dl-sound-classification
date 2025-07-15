@@ -14,7 +14,7 @@
 defaults:
   - base_training
   - dataset: esc50
-  - model: ast
+  - model: ast_mini
   - _self_
 
 hydra:
@@ -54,7 +54,7 @@ optuna:
   min_epochs: 20              # Minimum epochs before pruning
 
   # MLflow integration
-  mlflow_experiment_name: "optuna_hyperparameter_optimization_ast"
+  mlflow_experiment_name: "optuna_hyperparameter_optimization_ast_mini"
 
   # Output configuration
   output_dir: "outputs/optimization"

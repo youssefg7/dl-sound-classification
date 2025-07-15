@@ -104,6 +104,7 @@ def train(cfg: DictConfig) -> None:  # noqa: D401
         })
         print("⚠ No model-specific dataset overrides found, using defaults")
     
+    print("DataModule config:", datamodule_cfg)
     # Create datamodule with merged config
     datamodule = instantiate(datamodule_cfg)
     
