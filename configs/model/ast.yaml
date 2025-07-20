@@ -41,3 +41,6 @@ dataset_overrides:
     normalize: true                   # Boolean: normalize spectrograms for AST
     target_mean: 0.0                  # Range: -1.0 to 1.0, AST paper: 0.0
     target_std: 0.5                   # Range: 0.1-1.0, AST paper: 0.5
+    
+    # Multi-crop testing for improved test-time evaluation
+    multi_crop_test: false            # Enable multi-crop testing (10 crops per sample)

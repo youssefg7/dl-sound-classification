@@ -37,6 +37,10 @@ dataset_overrides:
     window_length: 5.0                 # Range: 1.0-10.0 seconds, EnvNet-v2 default: 5.0
     padding_ratio: 0.5                 # Range: 0.0-1.0, affects random cropping
     
+    # Multi-crop testing for improved test-time evaluation
+    multi_crop_test: false             # Enable multi-crop testing (10 crops per sample)
+    test_crops: 10                     # Number of crops for test-time evaluation
+    
     # Waveform augmentation (EnvNet-v2 specific)
     augment:
       time_stretch: null       # Range: [0.5-0.9, 1.1-2.0], affects tempo (null to disable)

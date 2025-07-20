@@ -201,6 +201,14 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
             wave: torch.Tensor = bundle["waveform"]  # shape (1, samples)
             label: int = bundle["label"]
 
+        # Handle multi-crop testing (only for test set, not training)
+        if not self.training and self.preprocessor and hasattr(self.preprocessor, 'multi_crop_test'):
+            # Check if multi-crop is enabled in preprocessing config
+            if hasattr(self.preprocessor, 'config') and self.preprocessor.config.config.get("multi_crop_test", False):
+                crops = self.preprocessor.multi_crop_test(wave)
+                crops = [self.preprocessor.preprocess(c, 44100) for c in crops]
+                return crops, label
+
         # Apply model-specific preprocessing
         if self.preprocessing_mode == "envnet_v2":
             return self._process_envnet_v2(wave, label, idx)

@@ -18,7 +18,7 @@ import gzip
 import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -704,8 +704,15 @@ class BasePreprocessor(ABC):
     
     @abstractmethod
     def get_cache_suffix(self) -> str:
-        """Get the cache directory suffix for this preprocessor."""
+        """Return cache suffix for this preprocessor."""
         pass
+
+    def multi_crop_test(self, waveform: torch.Tensor) -> List[torch.Tensor]:
+        """
+        Create multiple evenly spaced crops for test-time evaluation.
+        Default implementation returns single crop - override in subclasses.
+        """
+        return [self.preprocess(waveform, self.config.config.get('sample_rate', 44100))]
     
     def setup_cache(self, base_cache_dir: Path, force_rebuild: bool = False, max_cache_size_gb: float = 5.0) -> None:
         """
@@ -1030,6 +1037,40 @@ class ASTPreprocessor(BasePreprocessor):
                 log_mel = log_mel * self.target_std + self.target_mean
         
         return log_mel
+    
+    def multi_crop_test(self, waveform: torch.Tensor) -> List[torch.Tensor]:
+        """
+        Create multiple evenly spaced crops for test-time evaluation.
+        For AST, this creates multiple spectrograms from different waveform segments.
+        
+        Args:
+            waveform: Padded waveform tensor
+            
+        Returns:
+            List of preprocessed spectrograms
+        """
+        # For AST, we create multiple spectrograms from different waveform segments
+        # This is less common for AST but provides consistency with EnvNet
+        total_length = waveform.shape[-1]
+        n_crops = 10  # Default number of crops
+        
+        if total_length <= self.sample_rate * 5:  # If shorter than 5 seconds
+            # Just return the single preprocessed spectrogram
+            return [self.preprocess(waveform, self.sample_rate)]
+        
+        # Create evenly spaced crops
+        crop_length = int(self.sample_rate * 5)  # 5-second crops
+        max_start = total_length - crop_length
+        starts = torch.linspace(0, max_start, n_crops).long()
+        
+        crops = []
+        for start_idx in starts:
+            crop = waveform[..., start_idx:start_idx + crop_length]
+            # Preprocess each crop to spectrogram
+            spec = self.preprocess(crop, self.sample_rate)
+            crops.append(spec)
+            
+        return crops
     
     def apply_specaugment(self, spectrogram: torch.Tensor, time_mask: int = 192, freq_mask: int = 48) -> torch.Tensor:
         """
@@ -1453,8 +1494,8 @@ class CNNESC50Preprocessor(BasePreprocessor):
         # to PIL F-mode image for augment
         img = Image.fromarray(db.squeeze(0).numpy().astype('float32'), mode='F')
         # augment & normalize
-        img_tensor = self.augment(img)
-        tensor     = self.post(img_tensor)  # [1,224,224]
+        img_augmented = self.augment(img)  # PIL Image
+        tensor = self.post(img_augmented)   # [1,224,224] tensor
         # replicate to 3 channels for CNN input
         tensor = tensor.repeat(3, 1, 1)  # [3,224,224]
         return tensor
