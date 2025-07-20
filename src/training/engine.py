@@ -82,6 +82,9 @@ class LitClassifier(pl.LightningModule):
             instantiate(loss_cfg) if loss_cfg is not None else nn.CrossEntropyLoss()
         )
 
+        # Helper method to check if using KLDivLoss
+        self._is_kl_loss = self._is_kl_divergence_loss()
+
         # optional metrics (e.g. torchmetrics.Accuracy)
         self.metric = instantiate(metric_cfg) if metric_cfg is not None else None
         if self.metric is None:
@@ -120,6 +123,11 @@ class LitClassifier(pl.LightningModule):
             }
         )
 
+    def _is_kl_divergence_loss(self) -> bool:
+        """Check if the criterion is KLDivLoss."""
+        return (hasattr(self.criterion, '__class__') and 
+                'KL' in self.criterion.__class__.__name__)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
@@ -131,18 +139,26 @@ class LitClassifier(pl.LightningModule):
         else:
             x, y = batch 
 
-        logits = self(x)
+        # Handle multi-crop testing (x is list of crops)
+        if isinstance(x, (list, tuple)) and stage == "test":
+            # x is list of length 10, each (B, 1, 220500)
+            logits_stacked = torch.stack([self(x_i) for x_i in x], dim=0)  # (10, B, C)
+            logits = logits_stacked.mean(dim=0)                            # (B, C)
+        else:
+            logits = self(x)
         
         # Handle both hard labels (int) and soft labels (float tensor)
         if y.dtype == torch.float32 and y.dim() > 1:
             # Soft labels (e.g., from BC mixing) - use KL divergence or similar
-            if hasattr(self.criterion, '__class__') and 'KL' in self.criterion.__class__.__name__:
+            if self._is_kl_loss:
                 # For KL divergence loss, convert logits to log probabilities
                 log_probs = torch.nn.functional.log_softmax(logits, dim=1)
-                loss = self.criterion(log_probs, y)
+                # KLDivLoss expects target to be probabilities (not log probabilities)
+                target_probs = y
+                loss = self.criterion(log_probs, target_probs)
             else:
-                # For other losses (like CrossEntropy), convert soft labels to probabilities
-                # and use as target for soft cross-entropy
+                # For CrossEntropyLoss with soft labels, use manual soft cross-entropy
+                # CrossEntropyLoss expects logits and hard labels, but we have soft labels
                 probs = torch.nn.functional.softmax(logits, dim=1)
                 loss = -torch.sum(y * torch.log(probs + 1e-8), dim=1).mean()
             

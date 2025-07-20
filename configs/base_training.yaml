@@ -73,8 +73,13 @@ scheduler:
 # - KLDivLoss: for BC mixing (better for soft label distributions)  
 # - Standard losses: for no augmentation
 loss:
-  _target_: torch.nn.CrossEntropyLoss
-  label_smoothing: 0.0    # Range: 0.0-0.2, adds regularization
+  _target_: torch.nn.KLDivLoss
+  reduction: batchmean    # Required for KLDivLoss with soft labels
+
+# Alternative KLDivLoss configuration for BC mixing:
+# loss:
+#   _target_: torch.nn.KLDivLoss
+#   reduction: batchmean   # Required for KLDivLoss with soft labels
 
 # =============================================================================
 # METRICS CONFIGURATION
