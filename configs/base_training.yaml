@@ -76,6 +76,10 @@ loss:
   _target_: torch.nn.KLDivLoss
   reduction: batchmean    # Required for KLDivLoss with soft labels
 
+# loss:
+#   _target_: torch.nn.CrossEntropyLoss
+#   label_smoothing: 0.0    # Range: 0.0-0.2, adds regularization
+
 # Alternative KLDivLoss configuration for BC mixing:
 # loss:
 #   _target_: torch.nn.KLDivLoss
