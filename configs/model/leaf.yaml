@@ -1,3 +1,2 @@
 _target_: src.models.leaf.LeafModel
 num_classes: ${dataset.num_classes}
-#dropout: 0.5
