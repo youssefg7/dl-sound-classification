@@ -56,6 +56,7 @@ class LeafModel(nn.Module):
         self.gabor = GaborConv1d(n_filters=n_filters, kernel_size=kernel_size, sample_rate=sample_rate)
         self.pcen = PCEN(n_filters)
         self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
+        self.downsample = nn.AvgPool1d(kernel_size=160, stride=160)  # Reduces 220500 → ~1378
 
         # Deeper classifier
         self.classifier = nn.Sequential(
