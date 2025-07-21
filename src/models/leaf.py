@@ -5,7 +5,7 @@ import math
 
 
 class GaborConv1d(nn.Module):
-    def __init__(self, n_filters=40, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
+    def __init__(self, n_filters=80, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
         super().__init__()
         self.n_filters = n_filters
         self.kernel_size = kernel_size
@@ -44,19 +44,32 @@ class PCEN(nn.Module):
         self.s = s
 
     def forward(self, x):
-        # Apply EMA smoothing along time
         M = F.avg_pool1d(x, kernel_size=5, stride=1, padding=2)
         pcen = ((x / (self.eps + M) ** self.r.view(1, -1, 1)) + self.delta.view(1, -1, 1)).log()
         return pcen
 
 
 class LeafModel(nn.Module):
-    def __init__(self, n_filters=40, kernel_size=401, sample_rate=44100, num_classes=50):
+    def __init__(self, n_filters=80, kernel_size=401, sample_rate=44100, num_classes=50):
         super().__init__()
         self.gabor = GaborConv1d(n_filters=n_filters, kernel_size=kernel_size, sample_rate=sample_rate)
         self.pcen = PCEN(n_filters)
-        self.pooling = nn.AdaptiveAvgPool1d(1)  # Output shape: [B, C, 1]
-        self.classifier = nn.Linear(n_filters, num_classes)
+        self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
+
+        # Deeper classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(n_filters, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(128, num_classes)
+        )
 
     def forward(self, x):
         x = self.gabor(x)          # [B, C, T]
