@@ -113,7 +113,7 @@ git clone git@github.com:<org>/<repo>.git ~/dl-sound-classification
 salloc --qos=coc-ice \
        --gres=gpu:h200:1 \
        --time=08:00:00 \
-       --cpus-per-task=8 --mem=128G
+       --cpus-per-task=8 --mem=256G
 ```
 
 - Access the interactive session

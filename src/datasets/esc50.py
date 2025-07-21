@@ -82,7 +82,8 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
     def __init__(
         self,
         root: str | Path,
-        folds: Sequence[int],
+        folds: Sequence[int] = (),
+        files: List[Path] | None = None,
         sample_rate: int = 44_100,
         n_mels: int = 128,
         n_fft: int = 1_024,
@@ -100,12 +101,13 @@ class ESC50Dataset(Dataset, BCMixingDataset, MixupDataset):
         BCMixingDataset.__init__(self, enable_bc_mixing=enable_bc_mixing, num_classes=num_classes)
         MixupDataset.__init__(self, enable_mixup=enable_mixup, mixup_alpha=mixup_alpha, num_classes=num_classes)
         
-
-        
         self.root = Path(root)
-        self.files: List[Path] = []
-        for f in folds:
-            self.files += sorted((self.root / f"fold_{f}").glob("*.pt"))
+        if files is not None:
+            self.files: List[Path] = list(files)
+        else:
+            self.files: List[Path] = []
+            for f in folds:
+                self.files += sorted((self.root / f"fold_{f}").glob("*.pt"))
         if not self.files:
             raise FileNotFoundError(
                 f"No .pt files found in {self.root}; "
@@ -535,12 +537,32 @@ class ESC50DataModule(pl.LightningDataModule):
         print(f"Number of unique classes: {len(set(labels))}")
         splitter = StratifiedShuffleSplit(n_splits=1, test_size=val_size, random_state=42)
         train_idxs, val_idxs = next(splitter.split(np.zeros(len(labels)), labels))
-        self._train_set = Subset(full_train, train_idxs)
+        train_files = [full_train.files[i] for i in train_idxs]
+        val_files = [full_train.files[i] for i in val_idxs]
 
-        # Create a new ESC50Dataset for validation with training=False
-        val_set = ESC50Dataset(
+        # Assert no overlap between train and val files
+        overlap = set(train_files) & set(val_files)
+        if overlap:
+            raise RuntimeError(f"Data leakage detected: {len(overlap)} files in both train and val splits! Example: {list(overlap)[:5]}")
+
+        # Create ESC50Dataset for train and val splits with explicit file lists
+        self._train_set = ESC50Dataset(
             root=root,
-            folds=train_folds,
+            files=train_files,
+            sample_rate=self.sample_rate,
+            n_mels=self.n_mels,
+            augment=self.augment,
+            preprocessing_mode=self.preprocessing_mode,
+            preprocessing_config=self.preprocessing_config,
+            enable_bc_mixing=self.enable_bc_mixing,
+            enable_mixup=self.enable_mixup,
+            mixup_alpha=self.mixup_alpha,
+            num_classes=self.num_classes,
+            training=True,
+        )
+        self._val_set = ESC50Dataset(
+            root=root,
+            files=val_files,
             sample_rate=self.sample_rate,
             n_mels=self.n_mels,
             augment=None,
@@ -552,8 +574,6 @@ class ESC50DataModule(pl.LightningDataModule):
             num_classes=self.num_classes,
             training=False,
         )
-        self._val_set = Subset(val_set, val_idxs)
-
 
         # 3) test set = held-out fold
         self._test_set = ESC50Dataset(
