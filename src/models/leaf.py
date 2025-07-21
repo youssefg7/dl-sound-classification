@@ -51,46 +51,55 @@ class PCEN(nn.Module):
 
 
 class LeafModel(nn.Module):
-    def __init__(self, n_filters=128, kernel_size=401, sample_rate=44100, num_classes=50):
+    def __init__(self, n_filters=256, kernel_size=401, sample_rate=44100, num_classes=50):
         super().__init__()
         self.gabor = GaborConv1d(n_filters=n_filters, kernel_size=kernel_size, sample_rate=sample_rate)
         self.pcen = PCEN(n_filters)
-        self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
-        self.downsample = nn.AvgPool1d(kernel_size=160, stride=160)  # Reduces 220500 → ~1378
+        self.downsample = nn.AvgPool1d(kernel_size=160, stride=160)  # [B, C, ~1378]
 
         self.conv_block = nn.Sequential(
             nn.Conv1d(n_filters, 256, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.MaxPool1d(4),
+            nn.MaxPool1d(4),  # ~344
 
             nn.Conv1d(256, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.MaxPool1d(4)
+            nn.MaxPool1d(4),  # ~86
+
+            nn.Conv1d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.MaxPool1d(2),  # ~43
         )
 
-        # Deeper classifier
+        self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
+
         self.classifier = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+
             nn.Linear(512, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
             nn.Linear(256, 128),
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
 
             nn.Linear(128, num_classes)
         )
 
     def forward(self, x):
-        x = self.gabor(x) 
-        x = self.downsample(x)  
-        x = self.pcen(x) 
-        x = self.conv_block(x)          # [B, C, T]
-        x = self.pooling(x)        # [B, C, 1]
-        x = x.squeeze(-1)          # [B, C]
-        logits = self.classifier(x)  # [B, num_classes]
-        return logits
+        x = self.gabor(x)
+        x = self.downsample(x)
+        x = self.pcen(x)
+        x = self.conv_block(x)
+        x = self.pooling(x).squeeze(-1)
+        return self.classifier(x)
+
