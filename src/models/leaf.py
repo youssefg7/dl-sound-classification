@@ -72,8 +72,9 @@ class LeafModel(nn.Module):
         )
 
     def forward(self, x):
-        x = self.gabor(x)          # [B, C, T] or [B, C, T, 1]
-        print(f"Shape after GaborConv1d: {x.shape}")
+        x = self.gabor(x) 
+        print(x.shape)         # [B, C, T] or [B, C, T, 1]
+        x = x.squeeze(-1)         # [B, C, T]
         x = self.pcen(x)           # [B, C, T]
         x = self.pooling(x)        # [B, C, 1]
         x = x.squeeze(-1)          # [B, C]
