@@ -74,7 +74,7 @@ class LeafModel(nn.Module):
 
     def forward(self, x):
         x = self.gabor(x) 
-        x = self.downsample(x)  # Add this line
+        x = self.downsample(x)  
         x = self.pcen(x)           # [B, C, T]
         x = self.pooling(x)        # [B, C, 1]
         x = x.squeeze(-1)          # [B, C]
