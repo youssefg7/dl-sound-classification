@@ -51,7 +51,7 @@ class PCEN(nn.Module):
 
 
 class LeafModel(nn.Module):
-    def __init__(self, n_filters=256, kernel_size=401, sample_rate=44100, num_classes=50):
+    def __init__(self, n_filters=160, kernel_size=401, sample_rate=44100, num_classes=50):
         super().__init__()
         self.gabor = GaborConv1d(n_filters=n_filters, kernel_size=kernel_size, sample_rate=sample_rate)
         self.pcen = PCEN(n_filters)
