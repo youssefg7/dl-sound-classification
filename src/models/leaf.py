@@ -63,12 +63,12 @@ class LeafModel(nn.Module):
             nn.ReLU(),
             nn.MaxPool1d(4),  # ~344
 
-            nn.Conv1d(256, 512, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(512),
+            nn.Conv1d(256, 384, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(384),
             nn.ReLU(),
             nn.MaxPool1d(4),  # ~86
 
-            nn.Conv1d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(384, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(512),
             nn.ReLU(),
             nn.MaxPool1d(2),  # ~43
@@ -77,22 +77,11 @@ class LeafModel(nn.Module):
         self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
 
         self.classifier = nn.Sequential(
-            nn.Linear(512, 512),
+            nn.Linear(512, 256),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Dropout(0.4),
-
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-
-            nn.Linear(128, num_classes)
+            nn.Dropout(0.3),
+            nn.Linear(256, num_classes)
         )
 
     def forward(self, x):
