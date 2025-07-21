@@ -25,6 +25,8 @@ from typing import Callable, Dict, List, Sequence, Any, Tuple, Optional, Union
 import lightning.pytorch as pl
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset
+import numpy as np
+from sklearn.model_selection import StratifiedShuffleSplit
 
 try:
     from ..utils.audio import SpecAugment, melspectrogram
@@ -523,14 +525,35 @@ class ESC50DataModule(pl.LightningDataModule):
         # 2) deterministic train/val split (stratified enough because folds
         #    are already balanced). We simply slice by index here.
         val_size = math.ceil(len(full_train) * self.val_split)
-        idxs = list(range(len(full_train)))
-        random.Random(42).shuffle(idxs)  # reproducible
-
-        val_idxs = idxs[:val_size]
-        train_idxs = idxs[val_size:]
-
+        print(f"Val size: {val_size}")
+        # Get integer labels directly from the .pt files
+        labels = []
+        for idx in range(len(full_train)):
+            bundle = torch.load(full_train.files[idx])
+            labels.append(bundle["label"])
+        print(f"There are {len(labels)} labels")
+        print(f"Number of unique classes: {len(set(labels))}")
+        splitter = StratifiedShuffleSplit(n_splits=1, test_size=val_size, random_state=42)
+        train_idxs, val_idxs = next(splitter.split(np.zeros(len(labels)), labels))
         self._train_set = Subset(full_train, train_idxs)
-        self._val_set = Subset(full_train, val_idxs)
+
+        # Create a new ESC50Dataset for validation with training=False
+        val_set = ESC50Dataset(
+            root=root,
+            folds=train_folds,
+            sample_rate=self.sample_rate,
+            n_mels=self.n_mels,
+            augment=None,
+            preprocessing_mode=self.preprocessing_mode,
+            preprocessing_config=self.preprocessing_config,
+            enable_bc_mixing=False,
+            enable_mixup=False,
+            mixup_alpha=self.mixup_alpha,
+            num_classes=self.num_classes,
+            training=False,
+        )
+        self._val_set = Subset(val_set, val_idxs)
+
 
         # 3) test set = held-out fold
         self._test_set = ESC50Dataset(
