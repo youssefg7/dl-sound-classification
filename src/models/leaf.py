@@ -5,7 +5,7 @@ import math
 
 
 class GaborConv1d(nn.Module):
-    def __init__(self, n_filters=128, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
+    def __init__(self, n_filters=160, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
         super().__init__()
         self.n_filters = n_filters
         self.kernel_size = kernel_size
