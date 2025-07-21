@@ -45,7 +45,7 @@ seed: 42                  # Range: any integer, for reproducibility
 trainer:
   max_epochs: 250        # Range: 50-1000, AST: 100-200, EnvNet-v2: 200-300
   accelerator: auto       # Options: auto, gpu, cpu, tpu
-  precision: 16-mixed     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
+  precision: 32     # Options: 32, 16-mixed, bf16-mixed | EnvNet-v2: use 32, AST: 16-mixed
   devices: 1              # Range: 1-8, number of GPUs/devices
   log_every_n_steps: 1   # Range: 10-100, logging frequency | Recommended: 10 for less verbose
   gradient_clip_val: 1.0  # Prevent gradient explosion and reduce memory spikes
@@ -55,8 +55,8 @@ trainer:
 # =============================================================================
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.0005               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
-  weight_decay: 1e-6      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
+  lr: 0.0001               # Range: 1e-5 to 1e-2 | AST: 0.0005, EnvNet-v2: 0.0001 (IMPORTANT!)
+  weight_decay: 1e-4      # Range: 0 to 1e-3, AST: 1e-6, EnvNet-v2: 1e-4
 
 # =============================================================================
 # SCHEDULER CONFIGURATION
@@ -72,13 +72,14 @@ scheduler:
 # - CrossEntropyLoss: for Mixup (handles soft labels automatically)
 # - KLDivLoss: for BC mixing (better for soft label distributions)  
 # - Standard losses: for no augmentation
-loss:
-  _target_: torch.nn.KLDivLoss
-  reduction: batchmean    # Required for KLDivLoss with soft labels
 
-# loss:
-#   _target_: torch.nn.CrossEntropyLoss
-#   label_smoothing: 0.0    # Range: 0.0-0.2, adds regularization
+# loss: # for BC mixing
+#   _target_: torch.nn.KLDivLoss
+#   reduction: batchmean    # Required for KLDivLoss with soft labels
+
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+  label_smoothing: 0.0    # Range: 0.0-0.2, adds regularization
 
 # Alternative KLDivLoss configuration for BC mixing:
 # loss:
@@ -99,7 +100,7 @@ metric:
 # NOTE: These are the SINGLE SOURCE OF TRUTH for batch_size and num_workers
 # They are passed directly to the datamodule constructor by the training script
 # DO NOT duplicate these values in dataset config files
-batch_size: 128            # Range: 8-128, AST: 96-128 (large), EnvNet-v2: 32-64
+batch_size: 64            # Range: 8-128, AST: 96-128 (large), EnvNet-v2: 32-64
 num_workers: 8            # Range: 0-16, 8 is optimal
 
 # =============================================================================
@@ -118,7 +119,7 @@ checkpoint:
 early_stop:
   monitor: val/acc        # Same as checkpoint monitor
   mode: max               # Same as checkpoint mode  
-  patience: 30            # Range: 5-50, AST: 15, EnvNet-v2: 40
+  patience: 40            # Range: 5-50, AST: 15, EnvNet-v2: 40
   min_delta: 0.001        # Range: 0.0001-0.01, minimum improvement threshold
 
 # =============================================================================
