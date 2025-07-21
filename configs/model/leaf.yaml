@@ -1,2 +1,85 @@
 _target_: src.models.leaf.LeafModel
 num_classes: ${dataset.num_classes}
+
+
+model:
+  n_filters:
+    type: int
+    low: 64
+    high: 256
+  kernel_size:
+    type: categorical
+    choices: [201, 301, 401, 501]
+  num_classes:
+    type: constant
+    value: 50
+
+gabor:
+  min_freq:
+    type: float
+    low: 40.0
+    high: 100.0
+  max_freq:
+    type: float
+    low: 6000.0
+    high: 8000.0
+
+pcen:
+  alpha:
+    type: float
+    low: 0.7
+    high: 0.99
+  delta:
+    type: float
+    low: 1.0
+    high: 3.0
+  r:
+    type: float
+    low: 0.1
+    high: 1.0
+
+optimizer:
+  name:
+    type: categorical
+    choices: ["adam", "sgd"]
+  lr:
+    type: float
+    low: 1e-5
+    high: 1e-2
+    log: true
+  weight_decay:
+    type: float
+    low: 1e-6
+    high: 1e-3
+    log: true
+
+training:
+  batch_size:
+    type: int
+    low: 16
+    high: 64
+  epochs:
+    type: constant
+    value: 50
+  early_stopping:
+    type: constant
+    value: true
+  patience:
+    type: constant
+    value: 7
+
+conv_block:
+  dropout:
+    type: float
+    low: 0.2
+    high: 0.5
+
+classifier:
+  hidden_size_1:
+    type: int
+    low: 128
+    high: 512
+  hidden_size_2:
+    type: int
+    low: 64
+    high: 256
