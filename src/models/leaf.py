@@ -72,7 +72,7 @@ class LeafModel(nn.Module):
 
         # Deeper classifier
         self.classifier = nn.Sequential(
-            nn.Linear(n_filters, 256),
+            nn.Linear(512, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.3),
