@@ -5,7 +5,7 @@ import math
 
 
 class GaborConv1d(nn.Module):
-    def __init__(self, n_filters=80, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
+    def __init__(self, n_filters=128, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
         super().__init__()
         self.n_filters = n_filters
         self.kernel_size = kernel_size
@@ -58,6 +58,18 @@ class LeafModel(nn.Module):
         self.pooling = nn.AdaptiveAvgPool1d(1)  # [B, C, 1]
         self.downsample = nn.AvgPool1d(kernel_size=160, stride=160)  # Reduces 220500 → ~1378
 
+        self.conv_block = nn.Sequential(
+            nn.Conv1d(n_filters, 256, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.MaxPool1d(4),
+
+            nn.Conv1d(256, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.MaxPool1d(4)
+        )
+
         # Deeper classifier
         self.classifier = nn.Sequential(
             nn.Linear(n_filters, 256),
@@ -76,7 +88,8 @@ class LeafModel(nn.Module):
     def forward(self, x):
         x = self.gabor(x) 
         x = self.downsample(x)  
-        x = self.pcen(x)           # [B, C, T]
+        x = self.pcen(x) 
+        x = self.conv_block(x)          # [B, C, T]
         x = self.pooling(x)        # [B, C, 1]
         x = x.squeeze(-1)          # [B, C]
         logits = self.classifier(x)  # [B, num_classes]
