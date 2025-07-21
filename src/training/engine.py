@@ -22,6 +22,11 @@ import torch.nn as nn
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from torchmetrics.classification import MulticlassF1Score, MulticlassAUROC, MulticlassConfusionMatrix, MulticlassAccuracy
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.pyplot as plt
+import os
+import tempfile
 
 
 def _adapt_head_if_possible(model: nn.Module, num_classes: int) -> None:
@@ -105,7 +110,9 @@ class LitClassifier(pl.LightningModule):
         self.test_class_acc = MulticlassAccuracy(num_classes=model_cfg.get("num_classes", None),
                                                  average=None)
 
-    
+        self.train_acc_history = []
+        self.val_acc_history = []
+        self.epoch_history = []
 
         # 4) Store optimiser/scheduler cfg for later
         self._optim_cfg = optim_cfg
@@ -204,11 +211,14 @@ class LitClassifier(pl.LightningModule):
         train_acc = self.train_acc.compute()
         self.log("train/acc", train_acc, prog_bar=True)
         self.train_acc.reset()
+        self.train_acc_history.append(float(train_acc))
+        self.epoch_history.append(self.current_epoch)
 
     def on_validation_epoch_end(self) -> None:
         val_acc = self.val_acc.compute()
         self.log("val/acc", val_acc, prog_bar=True)
         self.val_acc.reset()
+        self.val_acc_history.append(float(val_acc))
 
     def on_test_epoch_end(self) -> None:
         test_acc = self.test_acc.compute()
@@ -219,15 +229,72 @@ class LitClassifier(pl.LightningModule):
         self.log("test/acc", test_acc, prog_bar=True)
         self.log("test/f1", test_f1, prog_bar=True)
         self.log("test/auroc", test_auroc, prog_bar=True)
-        self.log("test/confmat", test_confmat, prog_bar=True)
-        self.log("test/class_acc", test_class_acc, prog_bar=True)
-        torch.save(test_confmat.cpu(), f"{self.logger.log_dir}/test_confmat.pt")
-        torch.save(test_class_acc.cpu(), f"{self.logger.log_dir}/test_class_acc.pt")
+        confmat = test_confmat.cpu().numpy()
+        fig, ax = plt.subplots(figsize=(10, 10))
+        sns.heatmap(confmat, annot=False, fmt="d", ax=ax)
+        plt.xlabel("Predicted")
+        plt.ylabel("True")
+        plt.title("Confusion Matrix")
+        if hasattr(self.logger, "experiment") and hasattr(self.logger.experiment, "log_figure"):
+            self.logger.experiment.log_figure(self.logger.run_id, fig, "confmat.png")
+        plt.close(fig)
+
+        # Plot per-class accuracy
+        class_acc = test_class_acc.cpu().numpy()
+        class_indices = list(range(len(class_acc)))
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.barplot(x=class_indices, y=class_acc, ax=ax)
+        ax.set_xlabel("Class Index")
+        ax.set_ylabel("Accuracy")
+        ax.set_title("Per-Class Accuracy")
+        ax.set_ylim(0, 1)
+        if hasattr(self.logger, "experiment") and hasattr(self.logger.experiment, "log_figure"):
+            self.logger.experiment.log_figure(self.logger.run_id, fig, "per_class_accuracy.png")
+        plt.close(fig)
+        
+        
+        # Save confusion matrix and per-class accuracy
+        test_confmat_path = None
+        test_class_acc_path = None
+
+        if hasattr(self.logger, "log_dir") and self.logger.log_dir is not None:
+            # For loggers with log_dir (e.g., TensorBoardLogger)
+            os.makedirs(self.logger.log_dir, exist_ok=True)
+            test_confmat_path = os.path.join(self.logger.log_dir, "test_confmat.pt")
+            test_class_acc_path = os.path.join(self.logger.log_dir, "test_class_acc.pt")
+            torch.save(test_confmat.cpu(), test_confmat_path)
+            torch.save(test_class_acc.cpu(), test_class_acc_path)
+        elif hasattr(self.logger, "experiment") and hasattr(self.logger.experiment, "log_artifact"):
+            # For MLflowLogger: save to temp dir, then log as artifact
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_confmat_path = os.path.join(tmpdir, "test_confmat.pt")
+                test_class_acc_path = os.path.join(tmpdir, "test_class_acc.pt")
+                torch.save(test_confmat.cpu(), test_confmat_path)
+                torch.save(test_class_acc.cpu(), test_class_acc_path)
+                self.logger.experiment.log_artifact(self.logger.run_id, test_confmat_path)
+                self.logger.experiment.log_artifact(self.logger.run_id, test_class_acc_path)
+        else:
+            print("Warning: Could not determine logger directory or artifact method. Not saving confusion matrix/class accuracy tensors.")
+
         self.test_acc.reset()
         self.test_f1.reset()
         self.test_auroc.reset()
         self.test_confmat.reset()
         self.test_class_acc.reset()
+
+    def on_fit_end(self) -> None:
+        # Plot train/val accuracy per epoch
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(range(len(self.train_acc_history)), self.train_acc_history, label="Train Acc")
+        ax.plot(range(len(self.val_acc_history)), self.val_acc_history, label="Val Acc")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Accuracy")
+        ax.set_title("Train/Val Accuracy per Epoch")
+        ax.set_ylim(0, 1)
+        ax.legend()
+        if hasattr(self.logger, "experiment") and hasattr(self.logger.experiment, "log_figure"):
+            self.logger.experiment.log_figure(self.logger.run_id, fig, "train_val_accuracy.png")
+        plt.close(fig)
 
     def configure_optimizers(self):
         optim = instantiate(self._optim_cfg, params=self.parameters())
