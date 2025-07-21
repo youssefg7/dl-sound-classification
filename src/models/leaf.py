@@ -44,8 +44,8 @@ class PCEN(nn.Module):
         self.s = s
 
     def forward(self, x):
-        print(x.shape)  # Debugging: print shape of input tensor
-        M = F.AdaptiveAvgPool1d(x, kernel_size=5, stride=1, padding=2)
+        #print(x.shape)  # Debugging: print shape of input tensor
+        M = F.avg_pool1d(x, kernel_size=5, stride=1, padding=2)
         pcen = ((x / (self.eps + M) ** self.r.view(1, -1, 1)) + self.delta.view(1, -1, 1)).log()
         return pcen
 
@@ -74,6 +74,7 @@ class LeafModel(nn.Module):
 
     def forward(self, x):
         x = self.gabor(x) 
+        x = self.downsample(x)  # Add this line
         x = self.pcen(x)           # [B, C, T]
         x = self.pooling(x)        # [B, C, 1]
         x = x.squeeze(-1)          # [B, C]
