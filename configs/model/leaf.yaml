@@ -2,7 +2,7 @@ _target_: src.models.leaf.LeafModel
 num_classes: ${dataset.num_classes}
 
 
-model:
+LeafModel:
   n_filters:
     type: int
     low: 64
