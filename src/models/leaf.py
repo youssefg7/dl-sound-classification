@@ -51,12 +51,17 @@ class PCEN(nn.Module):
 
 
 class LeafModel(nn.Module):
-    def __init__(self, n_filters=40, kernel_size=401, sample_rate=44100):
+    def __init__(self, n_filters=40, kernel_size=401, sample_rate=44100, num_classes=50):
         super().__init__()
         self.gabor = GaborConv1d(n_filters=n_filters, kernel_size=kernel_size, sample_rate=sample_rate)
         self.pcen = PCEN(n_filters)
+        self.pooling = nn.AdaptiveAvgPool1d(1)  # Output shape: [B, C, 1]
+        self.classifier = nn.Linear(n_filters, num_classes)
 
     def forward(self, x):
-        x = self.gabor(x)
-        x = self.pcen(x)
-        return x
+        x = self.gabor(x)          # [B, C, T]
+        x = self.pcen(x)           # [B, C, T]
+        x = self.pooling(x)        # [B, C, 1]
+        x = x.squeeze(-1)          # [B, C]
+        logits = self.classifier(x)  # [B, num_classes]
+        return logits
