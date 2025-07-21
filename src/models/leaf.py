@@ -44,6 +44,10 @@ class PCEN(nn.Module):
         self.s = s
 
     def forward(self, x):
+        if x.dim() == 4:
+            x = x.squeeze(-1)  # remove last dim if unnecessary
+        elif x.dim() != 3:
+            raise ValueError(f"Expected input with 3 or 4 dimensions, got {x.dim()}")
         M = F.avg_pool1d(x, kernel_size=5, stride=1, padding=2)
         pcen = ((x / (self.eps + M) ** self.r.view(1, -1, 1)) + self.delta.view(1, -1, 1)).log()
         return pcen
