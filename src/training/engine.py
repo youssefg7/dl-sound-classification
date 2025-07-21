@@ -21,6 +21,7 @@ import torch
 import torch.nn as nn
 from hydra.utils import instantiate
 from omegaconf import DictConfig
+from torchmetrics.classification import MulticlassF1Score, MulticlassAUROC, MulticlassConfusionMatrix, MulticlassAccuracy
 
 
 def _adapt_head_if_possible(model: nn.Module, num_classes: int) -> None:
@@ -98,6 +99,11 @@ class LitClassifier(pl.LightningModule):
         self.train_acc = instantiate(metric_cfg)
         self.val_acc = instantiate(metric_cfg)
         self.test_acc = instantiate(metric_cfg)
+        self.test_f1 = MulticlassF1Score(num_classes=model_cfg.get("num_classes", None))
+        self.test_auroc = MulticlassAUROC(num_classes=model_cfg.get("num_classes", None))
+        self.test_confmat = MulticlassConfusionMatrix(num_classes=model_cfg.get("num_classes", None))
+        self.test_class_acc = MulticlassAccuracy(num_classes=model_cfg.get("num_classes", None),
+                                                 average=None)
 
     
 
@@ -177,7 +183,10 @@ class LitClassifier(pl.LightningModule):
             self.val_acc.update(logits, hard_labels)
         elif stage == "test":
             self.test_acc.update(logits, hard_labels)
-
+            self.test_f1.update(logits, hard_labels)
+            self.test_auroc.update(logits, hard_labels)
+            self.test_confmat.update(logits, hard_labels)
+            self.test_class_acc.update(logits, hard_labels)
         return loss
 
     # Lightning hooks ------------------------------------------------------- #
@@ -203,8 +212,22 @@ class LitClassifier(pl.LightningModule):
 
     def on_test_epoch_end(self) -> None:
         test_acc = self.test_acc.compute()
+        test_f1 = self.test_f1.compute()
+        test_auroc = self.test_auroc.compute()
+        test_confmat = self.test_confmat.compute()
+        test_class_acc = self.test_class_acc.compute()
         self.log("test/acc", test_acc, prog_bar=True)
+        self.log("test/f1", test_f1, prog_bar=True)
+        self.log("test/auroc", test_auroc, prog_bar=True)
+        self.log("test/confmat", test_confmat, prog_bar=True)
+        self.log("test/class_acc", test_class_acc, prog_bar=True)
+        torch.save(test_confmat.cpu(), f"{self.logger.log_dir}/test_confmat.pt")
+        torch.save(test_class_acc.cpu(), f"{self.logger.log_dir}/test_class_acc.pt")
         self.test_acc.reset()
+        self.test_f1.reset()
+        self.test_auroc.reset()
+        self.test_confmat.reset()
+        self.test_class_acc.reset()
 
     def configure_optimizers(self):
         optim = instantiate(self._optim_cfg, params=self.parameters())
