@@ -3,7 +3,6 @@ num_classes: ${dataset.num_classes}
 n_filters: 128
 kernel_size: 401
 sample_rate: 44100
-num_classes: 50
 
 
 

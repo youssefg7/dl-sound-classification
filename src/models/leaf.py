@@ -97,4 +97,22 @@ class LeafModel(nn.Module):
         x = self.conv_block(x)
         x = self.pooling(x).squeeze(-1)
         return self.classifier(x)
+    
+        def training_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self.forward(x)
+        loss = self.loss_fn(logits, y)
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self.forward(x)
+        loss = self.loss_fn(logits, y)
+        acc = (logits.argmax(dim=-1) == y).float().mean()
+        self.log("val_loss", loss)
+        self.log("val_acc", acc)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
 
