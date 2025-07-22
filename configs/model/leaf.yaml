@@ -1,25 +1,10 @@
-model:
-  _target_: src.models.leaf.LeafModel
-  n_filters: 128
-  kernel_size: 401
-  sample_rate: 44100
-  num_classes: 50
+_target_: src.models.leaf.LeafModel
+num_classes: ${dataset.num_classes}
+n_filters: 128
+kernel_size: 401
+sample_rate: 44100
+num_classes: 50
 
-training:
-  batch_size: 32
-  epochs:  
-  lr: 0.001
-  early_stopping: true
-  patience: 7
 
-pcen:
-  alpha: 0.98
-  delta: 2.0
-  r: 0.5
 
-conv_block:
-  dropout: 0.3
 
-classifier:
-  hidden_size_1: 256
-  hidden_size_2: 128
