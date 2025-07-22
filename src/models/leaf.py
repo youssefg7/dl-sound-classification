@@ -98,7 +98,7 @@ class LeafModel(nn.Module):
         x = self.pooling(x).squeeze(-1)
         return self.classifier(x)
     
-        def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self.forward(x)
         loss = self.loss_fn(logits, y)
