@@ -7,9 +7,9 @@ import math
 class GaborConv1d(nn.Module):
     def __init__(self, n_filters=186, kernel_size=401, sample_rate=44100, min_freq=60.0, max_freq=7800.0):
         super().__init__()
-        self.n_filters = n_filters
-        self.kernel_size = kernel_size
-        self.sample_rate = sample_rate
+        self.n_filters = int(n_filters)
+        self.kernel_size = int(kernel_size)
+        self.sample_rate = int(sample_rate)
 
         # Learnable filter parameters
         self.center_freqs = nn.Parameter(torch.linspace(min_freq, max_freq, n_filters) / (sample_rate / 2))
