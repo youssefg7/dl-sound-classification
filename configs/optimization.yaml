@@ -55,7 +55,7 @@ optuna:
   min_epochs: 20              # Minimum epochs before pruning
 
   # MLflow integration
-  mlflow_experiment_name: "optuna_hyperparameter_optimization_ast_mini"
+  mlflow_experiment_name: "optuna_hyperparameter_optimization"
 
   # Output configuration
   output_dir: "outputs/optimization"
@@ -78,3 +78,21 @@ params:
   model.kernel_size: choice(201, 401, 801)
   model.dropout: uniform(0.1, 0.5)  # if your Leaf model supports dropout
   trainer.max_epochs: choice(20, 50, 100)
+
+# These are the hyperparameters Optuna will optimize
+# Define their search spaces below
+model:
+  _target_: src.models.leaf.LeafModel
+  num_classes: ${dataset.num_classes}
+  n_filters: choice(64, 128, 256)
+  kernel_size: choice(201, 401, 801)
+  sample_rate: 44100
+  dropout: uniform(0.1, 0.5)  # if your Leaf model supports dropout
+
+optimizer:
+  lr: float(log, 1e-5, 1e-2)
+  weight_decay: float(log, 1e-6, 1e-2)
+batch_size: choice(32, 64, 128)
+
+logging:
+  experiment_name: optuna_leaf_search
