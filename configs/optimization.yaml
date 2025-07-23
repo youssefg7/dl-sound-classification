@@ -3,7 +3,7 @@ defaults:
   - dataset: esc50
   - model: leaf
   - _self_   
-  - hydra/sweeper: optuna
+  - override hydra/sweeper: optuna  # ✅ this must be marked override
       # ✅ No hydra/sweeper here!
 
 logging:
