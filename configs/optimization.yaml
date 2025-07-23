@@ -64,8 +64,6 @@ optuna:
 trainer:
   max_epochs: 250
 
-  _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
-
 sampler:
   _target_: optuna.samplers.TPESampler
   seed: 42
