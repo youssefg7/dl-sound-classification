@@ -1,0 +1,37 @@
+# =============================================================================
+# Generic Training Configuration
+# =============================================================================
+# Generic training configuration that works with any model.
+# Specify the model using command line overrides.
+# 
+# USAGE EXAMPLES:
+# ===============
+# 
+# AST Training (automatically enables Mixup):
+#   python train.py model=ast
+#   python train.py model=ast dataset.mixup_alpha=0.8
+#   python train.py model=ast model.dataset_overrides.augment.time_mask=100
+#
+# EnvNet-v2 Training (automatically enables BC mixing):
+#   python train.py model=envnet_v2
+#   python train.py model=envnet_v2 dataset.enable_bc_mixing=false
+#   python train.py model=envnet_v2 model.dataset_overrides.preprocessing_config.window_length=3.0
+#
+# =============================================================================
+
+defaults:
+  - base_training
+  - dataset: esc50
+  - model: leaf  # ast or envnet_v2
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  output_subdir: null
+
+logging:
+  experiment_name: leaf_training
+  
+# NOTE: Checkpoint settings are configured in configs/base_training.yaml 
+
