@@ -94,5 +94,3 @@ optimizer:
   weight_decay: float(log, 1e-6, 1e-2)
 batch_size: choice(32, 64, 128)
 
-logging:
-  experiment_name: optuna_leaf_search
