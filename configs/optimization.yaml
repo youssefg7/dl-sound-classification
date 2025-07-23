@@ -1,21 +1,8 @@
-# =============================================================================
-# Optimization Configuration (EnvNet-v2)
-# =============================================================================
-# Configuration for EnvNet-v2 hyperparameter optimization.
-# Model-specific preprocessing settings are automatically applied from model config.
-# 
-# NOTE: Trainer settings are configured in configs/base_training.yaml
-# Override specific settings via command line: trainer.precision=16-mixed trainer.log_every_n_steps=10
-# 
-# NOTE: Loss function is configured in configs/base_training.yaml
-# Override via command line: loss._target_=torch.nn.KLDivLoss loss.reduction=batchmean
-# =============================================================================
-
-
 defaults:
   - base_training
   - dataset: esc50
   - model: leaf
+  - hydra/sweeper: optuna  # 💡 This tells Hydra to use Optuna for sweeps
   - _self_
 
 hydra:
@@ -24,73 +11,48 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: leaf_hyperparam_optimization
+  experiment_name: optuna_leaf_esc50
 
-# Optuna configuration
-optuna:
-  # Study configuration
-  study_name: "leaf_hyperparam_optimization"
-  direction: "maximize"  # maximize validation accuracy
-  storage_path: "optuna_studies.db"  # SQLite database path
-
-  # Optimization settings
-  n_trials: 100
-  timeout: 14400  # 4 hours in seconds (60*60*4 = 14400) (null for no timeout)
-
-  # TPE Sampler configuration
-  sampler:
-    n_startup_trials: 10      # Number of random trials before TPE kicks in
-    n_ei_candidates: 24       # Number of candidates for Expected Improvement
-    seed: 42                  # Random seed for reproducibility
-
-  # Hyperband Pruner configuration
-  pruner:
-    min_resource: 1           # Start with 1 epoch minimum
-    max_resource: 200         # Up to 200 epochs maximum  
-    reduction_factor: 2       # Keep top 50%, prune bottom 50%
-
-  # Monitoring configuration
-  monitor: "val/acc"          # Metric to optimize
-  mode: "max"                 # Maximize the metric
-  min_epochs: 20              # Minimum epochs before pruning
-
-  # MLflow integration
-  mlflow_experiment_name: "optuna_hyperparameter_optimization"
-
-  # Output configuration
-  output_dir: "outputs/optimization"
-  best_config_path: "best_config.yaml" 
-
-trainer:
-  max_epochs: 250
-
-sampler:
-  _target_: optuna.samplers.TPESampler
-  seed: 42
-
-direction: maximize
-study_name: leaf_hyperparam_optimization
-n_trials: 50
-n_jobs: 1
-
-# params:
-#   model.n_filters: int(choice(64, 128, 256))
-#   model.kernel_size: int(choice(201, 401, 801))
-#   model.dropout: uniform(0.1, 0.5)  # if your Leaf model supports dropout
-#   trainer.max_epochs: int(choice(20, 50, 100))
-
-# These are the hyperparameters Optuna will optimize
-# Define their search spaces below
 model:
   _target_: src.models.leaf.LeafModel
   num_classes: ${dataset.num_classes}
-  n_filters: choice(64, 128, 256)
-  kernel_size: choice(201, 401, 801)
+  n_filters: 128        # Default, will be overridden by sweep
+  kernel_size: 401      # Default, will be overridden by sweep
   sample_rate: 44100
 
 optimizer:
-  lr: float(log, 1e-5, 1e-2)
-  weight_decay: float(log, 1e-6, 1e-2)
-  batch_size: choice(32, 64, 128)
   _target_: torch.optim.Adam
+  lr: 1e-3
+  weight_decay: 1e-4
 
+# Optuna sweeper config
+hydra:
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+    direction: maximize
+    study_name: leaf_esc50_optuna
+    storage: sqlite:///optuna_leaf_esc50.db
+    n_trials: 50
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 42
+    search_space:
+      model.n_filters:
+        type: categorical
+        choices: [64, 128, 256]
+      model.kernel_size:
+        type: categorical
+        choices: [201, 401, 801]
+      optimizer.lr:
+        type: float
+        low: 1e-5
+        high: 1e-2
+        log: true
+      optimizer.weight_decay:
+        type: float
+        low: 1e-6
+        high: 1e-2
+        log: true
+
+trainer:
+  max_epochs: 50
