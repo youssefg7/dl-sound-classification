@@ -11,10 +11,11 @@
 # Override via command line: loss._target_=torch.nn.KLDivLoss loss.reduction=batchmean
 # =============================================================================
 
+
 defaults:
   - base_training
   - dataset: esc50
-  - model: ast_mini
+  - model: leaf
   - _self_
 
 hydra:
@@ -23,12 +24,12 @@ hydra:
   output_subdir: null
 
 logging:
-  experiment_name: ast_esc50_optimization
+  experiment_name: leaf_hyperparam_optimization
 
 # Optuna configuration
 optuna:
   # Study configuration
-  study_name: "ast_esc50_optimization"
+  study_name: "leaf_hyperparam_optimization"
   direction: "maximize"  # maximize validation accuracy
   storage_path: "optuna_studies.db"  # SQLite database path
 
@@ -62,3 +63,20 @@ optuna:
 
 trainer:
   max_epochs: 250
+
+  _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+
+sampler:
+  _target_: optuna.samplers.TPESampler
+  seed: 42
+
+direction: maximize
+study_name: leaf_hyperparam_optimization
+n_trials: 50
+n_jobs: 1
+
+params:
+  model.n_filters: choice(64, 128, 256)
+  model.kernel_size: choice(201, 401, 801)
+  model.dropout: uniform(0.1, 0.5)  # if your Leaf model supports dropout
+  trainer.max_epochs: choice(20, 50, 100)
