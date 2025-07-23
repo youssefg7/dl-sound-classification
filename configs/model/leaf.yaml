@@ -26,9 +26,6 @@ dataset_overrides:
       time_stretch: null
       gain_shift: null
 
-optimizer:
-  _target_: torch.optim.Adam
-  lr: ${optimizer.lr}
-  weight_decay: ${optimizer.weight_decay}
+
 
  
