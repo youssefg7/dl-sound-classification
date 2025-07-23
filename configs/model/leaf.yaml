@@ -26,3 +26,17 @@ dataset_overrides:
 
 
 
+# Enables Optuna sweeper
+defaults:
+  - override hydra/sweeper: optuna
+
+# Optuna Sweeper configuration
+hydra:
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+    direction: maximize
+    metric: val/acc  # replace with the actual metric key you log in validation_step
+    n_trials: 50
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 42
