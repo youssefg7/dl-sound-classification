@@ -2,7 +2,9 @@ defaults:
   - base_training
   - dataset: esc50
   - model: leaf
-  - _self_         # ✅ No hydra/sweeper here!
+  - _self_   
+  - hydra/sweeper: optuna
+      # ✅ No hydra/sweeper here!
 
 logging:
   experiment_name: optuna_leaf_esc50
