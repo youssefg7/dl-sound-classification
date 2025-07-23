@@ -5,10 +5,7 @@ defaults:
   - hydra/sweeper: optuna  # 💡 This tells Hydra to use Optuna for sweeps
   - _self_
 
-hydra:
-  run:
-    dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
-  output_subdir: null
+
 
 logging:
   experiment_name: optuna_leaf_esc50
@@ -53,6 +50,9 @@ hydra:
         low: 1e-6
         high: 1e-2
         log: true
+    run:
+      dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    output_subdir: null
 
 trainer:
   max_epochs: 50
