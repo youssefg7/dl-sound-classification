@@ -2,10 +2,7 @@ defaults:
   - base_training
   - dataset: esc50
   - model: leaf
-  - hydra/sweeper: optuna  # 💡 This tells Hydra to use Optuna for sweeps
-  - _self_
-
-
+  - _self_         # ✅ No hydra/sweeper here!
 
 logging:
   experiment_name: optuna_leaf_esc50
@@ -22,8 +19,11 @@ optimizer:
   lr: 1e-3
   weight_decay: 1e-4
 
-# Optuna sweeper config
 hydra:
+  run:
+    dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  output_subdir: null
+
   sweeper:
     _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
     direction: maximize
@@ -50,9 +50,6 @@ hydra:
         low: 1e-6
         high: 1e-2
         log: true
-    run:
-      dir: outputs/optimization/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    output_subdir: null
 
 trainer:
   max_epochs: 50
