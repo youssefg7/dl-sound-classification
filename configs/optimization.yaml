@@ -87,7 +87,6 @@ model:
   n_filters: choice(64, 128, 256)
   kernel_size: choice(201, 401, 801)
   sample_rate: 44100
-  dropout: uniform(0.1, 0.5)  # if your Leaf model supports dropout
 
 optimizer:
   lr: float(log, 1e-5, 1e-2)
