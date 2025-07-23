@@ -3,6 +3,8 @@ num_classes: ${dataset.num_classes}
 n_filters: 128
 kernel_size: 401
 sample_rate: 44100
+dropout: 0.5  # will be overridden by Optuna
+
 
 # Dataset overrides to apply the same augmentation/preprocessing as EnvNet-v2
 dataset_overrides:
@@ -23,5 +25,10 @@ dataset_overrides:
     augment:
       time_stretch: null
       gain_shift: null
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: ${optimizer.lr}
+  weight_decay: ${optimizer.weight_decay}
 
  
