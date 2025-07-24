@@ -5,25 +5,25 @@ kernel_size: 401
 sample_rate: 44100
 
 
-# Dataset overrides to apply the same augmentation/preprocessing as EnvNet-v2
-dataset:
-  preprocessing_mode: envnet_v2
-  is_spectrogram: false
+# # Dataset overrides to apply the same augmentation/preprocessing as EnvNet-v2
+# dataset:
+#   preprocessing_mode: envnet_v2
+#   is_spectrogram: false
 
-  enable_mixup: false
-  enable_bc_mixing: true
+#   enable_mixup: false
+#   enable_bc_mixing: true
 
-  augment:
-    time_mask: false
-    freq_mask: false
+#   augment:
+#     time_mask: false
+#     freq_mask: false
 
-  preprocessing_config:
-    window_length: 5.0
-    padding_ratio: 0.5
+#   preprocessing_config:
+#     window_length: 5.0
+#     padding_ratio: 0.5
 
-    augment:
-      time_stretch: null
-      gain_shift: null
+#     augment:
+#       time_stretch: null
+#       gain_shift: null
 
 
 
