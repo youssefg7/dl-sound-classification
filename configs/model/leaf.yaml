@@ -6,7 +6,7 @@ sample_rate: 44100
 
 
 # Dataset overrides to apply the same augmentation/preprocessing as EnvNet-v2
-dataset_overrides:
+dataset:
   preprocessing_mode: envnet_v2
   is_spectrogram: false
 
